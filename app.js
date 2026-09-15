@@ -107,6 +107,7 @@ function renderTasks(tasks) {
   }
   listArea.innerHTML = '';
 
+  let currentSubject = null;
   let currentImage = null;
   let currentCard = null;
 
@@ -139,7 +140,7 @@ function renderTasks(tasks) {
         reviewCard.appendChild(msg);
       } else {
         const listText = document.createElement('p');
-        listText.style.cssText = 'font-size: 16px; font-weight: bold; color: #333;';
+        listText.style.cssText = 'font-size: 16px; font-weight: bold; color: #dc3545;';
         listText.textContent = `復習が必要な問題番号: ${wrongList.join(', ')}`;
         reviewCard.appendChild(listText);
       }
@@ -147,15 +148,18 @@ function renderTasks(tasks) {
       return;
     }
 
-    // --- カード枠作成 ---
-    if (!currentCard || (hasImage && task.groupImage !== currentImage) || (!hasImage && currentImage !== null) || isKanji) {
+    // --- カード枠の作成条件（教科が変わった場合、画像が変わった場合、漢字の場合） ---
+    const isSubjectChanged = task.subject !== currentSubject;
+    const isImageChanged = hasImage && task.groupImage !== currentImage;
+
+    if (!currentCard || isSubjectChanged || isImageChanged || isKanji) {
       currentCard = document.createElement('div');
       currentCard.style.cssText = 'border: 1px solid #ddd; border-radius: 12px; padding: 16px; margin-bottom: 20px; background-color: #fff;';
 
       if (task.subject) {
         const subjectTag = document.createElement('span');
         subjectTag.textContent = `${task.subject} (Day ${task.day})`;
-        subjectTag.style.cssText = `display: inline-block; padding: 4px 12px; border-radius: 4px; background-color: ${task.subject === '漢字' ? '#28a745' : '#007bff'}; color: #fff; font-weight: bold; margin-bottom: 12px;`;
+        subjectTag.style.cssText = `display: inline-block; padding: 4px 12px; border-radius: 4px; background-color: ${task.subject === '漢字' ? '#28a745' : (task.subject === '算数' ? '#007bff' : '#ff8c00')}; color: #fff; font-weight: bold; margin-bottom: 12px;`;
         currentCard.appendChild(subjectTag);
       }
 
@@ -168,7 +172,9 @@ function renderTasks(tasks) {
         imgContainer.appendChild(img);
         currentCard.appendChild(imgContainer);
       }
+
       listArea.appendChild(currentCard);
+      currentSubject = task.subject;
       currentImage = hasImage ? task.groupImage : null;
     }
 
@@ -180,7 +186,7 @@ function renderTasks(tasks) {
       const wrongList = getWrongKanji();
 
       for (let i = 1; i <= 20; i++) {
-        const itemKey = `Day${task.day}-${i}`; // 例: Day11-1, Day11-2
+        const itemKey = `Day${task.day}-${i}`;
         const btn = document.createElement('button');
         btn.textContent = `${i}`;
         
