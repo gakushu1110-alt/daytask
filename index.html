@@ -5,105 +5,221 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>day-task-app</title>
   <style>
-    body { font-family: sans-serif; max-width: 650px; margin: 0 auto; padding: 20px; background-color: #f4f7f6; }
-    h1 { color: #333; font-size: 24px; text-align: center; margin-bottom: 10px; }
-    
-    /* メニュータブ */
-    .nav-tabs { display: flex; gap: 8px; justify-content: center; margin-bottom: 15px; flex-wrap: wrap; }
-    .nav-btn { padding: 10px 16px; cursor: pointer; border-radius: 8px; border: 1px solid #ccc; background: #fff; font-size: 14px; font-weight: bold; }
-    .nav-btn.active { background: #007bff; color: white; border-color: #007bff; }
-    .nav-btn.album-btn { background: #28a745; color: white; border-color: #28a745; }
-
-    /* 日数切り替えボタン */
-    .day-selector { margin-bottom: 20px; display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
-    .day-btn { padding: 8px 14px; cursor: pointer; border-radius: 6px; border: 1px solid #bbb; background: #fff; font-size: 13px; font-weight: bold; }
-    .day-btn.active { background: #6f42c1; color: white; border-color: #6f42c1; }
-
-    /* カード・枠組み */
-    .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 20px; }
-    .badge { display: inline-block; padding: 4px 8px; border-radius: 4px; color: white; font-weight: bold; font-size: 12px; margin-bottom: 10px; }
-    .bg-math { background-color: #007bff; }
-    .bg-science { background-color: #28a745; }
-    .bg-social { background-color: #fd7e14; }
-    .bg-kanji { background-color: #6f42c1; }
-    
-    /* 画像グループの表示エリア */
-    .group-image-container { background: #fff; border: 2px solid #ddd; padding: 10px; border-radius: 8px; margin-bottom: 15px; text-align: center; }
-    .group-img { max-width: 100%; height: auto; border-radius: 6px; }
-
-    /* 漢字：横5×縦4のボタン配置 */
-    .kanji-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-top: 15px; }
-    .kanji-num-btn { padding: 12px 4px; background: #f8f9fa; border: 2px solid #dee2e6; border-radius: 8px; font-size: 15px; font-weight: bold; color: #333; cursor: pointer; text-align: center; }
-    .kanji-num-btn.selected { background: #fff3bf; border-color: #f59f00; color: #d9480f; box-shadow: 0 2px 4px rgba(245, 159, 0, 0.3); }
-
-    /* 選択肢ボタン (ア〜エ) */
-    .options-grid { display: grid; gap: 8px; margin-top: 10px; }
-    .option-btn { padding: 12px; border: 2px solid #e0e0e0; background: white; border-radius: 8px; cursor: pointer; text-align: left; font-size: 16px; font-weight: bold; }
-    .option-btn:hover { border-color: #007bff; background-color: #f0f7ff; }
-
-    /* 記述式入力ボックス */
-    .input-box { width: 100%; padding: 12px; font-size: 16px; box-sizing: border-box; border: 2px solid #ccc; border-radius: 8px; margin: 10px 0; }
-    .submit-btn { padding: 10px 20px; background-color: #007bff; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; width: 100%; }
-
-    /* 図鑑ギャラリー */
-    .album-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; }
-    .album-card { background: white; border: 2px solid #e0e0e0; border-radius: 10px; padding: 12px; text-align: center; }
-    .album-card.locked { background: #e9ecef; border-style: dashed; color: #888; }
-    .album-img { width: 100%; height: 160px; object-fit: contain; margin-bottom: 8px; }
-
-    /* 解放ポップアップ (モーダル) */
-    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); justify-content: center; align-items: center; z-index: 1000; }
-    .modal-content { background: white; padding: 25px; border-radius: 16px; text-align: center; max-width: 400px; width: 85%; }
-    .reward-img { width: 200px; height: 200px; object-fit: contain; margin: 15px 0; }
-    .close-btn { padding: 10px 20px; background: #28a745; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 16px; }
-
-    /* フィードバック */
-    .feedback { font-weight: bold; margin-top: 10px; font-size: 16px; }
-    .correct { color: #28a745; }
-    .incorrect { color: #dc3545; }
-    .status-box { padding: 12px; border-radius: 8px; margin-bottom: 15px; font-weight: bold; }
+    body { font-family: sans-serif; padding: 16px; background: #f5f5f5; max-width: 600px; margin: 0 auto; }
+    .filter-btn { margin-right: 8px; margin-bottom: 12px; padding: 8px 16px; border: 1px solid #007bff; border-radius: 20px; background: #fff; color: #007bff; font-weight: bold; cursor: pointer; }
+    .task-card { border: 1px solid #ddd; border-radius: 12px; padding: 16px; margin-bottom: 20px; background: #fff; }
+    .subject-tag { display: inline-block; padding: 4px 12px; border-radius: 4px; color: #fff; font-weight: bold; margin-bottom: 12px; }
+    .grid-container { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-top: 12px; }
+    .grid-btn { padding: 10px 0; font-weight: bold; border-radius: 6px; border: 1px solid #ccc; cursor: pointer; }
   </style>
 </head>
 <body>
 
-  <h1>day-task-app</h1>
+  <div id="button-container"></div>
+  <div id="task-container">データを読み込み中...</div>
 
-  <!-- メイン切り替えナビ -->
-  <div class="nav-tabs">
-    <button class="nav-btn active" id="tab-study" onclick="showTab('study')">📖 学習メニュー</button>
-    <button class="nav-btn album-btn" id="tab-album" onclick="showTab('album')">🏆 ユニフォーム図鑑</button>
-  </div>
+  <script>
+    const SPREADSHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTzYoXb4M6qc3sfcufFt1c223xm8N8HO5OtzsK4rwWy9wt7orxWX6XgEVJxMv_rwHASopdqnvBnn_OW/pub?output=csv';
+    let allTasks = [];
 
-  <!-- 学習エリア -->
-  <div id="study-view">
-    <div class="day-selector">
-      <button class="day-btn active" onclick="switchDay(11)">11日目</button>
-      <button class="day-btn" onclick="switchDay(12)">12日目</button>
-      <button class="day-btn" onclick="switchDay(13)">13日目 (テスト)</button>
-    </div>
+    document.addEventListener('DOMContentLoaded', () => {
+      fetchData();
+    });
 
-    <h2 id="page-title" style="text-align: center;">11日目の学習課題</h2>
-    <div id="status-container"></div>
-    <div id="main-container"></div>
-  </div>
+    async function fetchData() {
+      try {
+        const response = await fetch(SPREADSHEET_URL);
+        if (!response.ok) throw new Error('CSV取得エラー');
+        const data = await response.text();
+        allTasks = parseCSV(data);
+        renderSubjectButtons(allTasks);
+        renderTasks(allTasks);
+      } catch (error) {
+        document.getElementById('task-container').innerHTML = '<p style="color:red;">データの読み込みに失敗しました。</p>';
+      }
+    }
 
-  <!-- 図鑑エリア -->
-  <div id="album-view" style="display: none;">
-    <h2 style="text-align: center;">獲得ユニフォームカード</h2>
-    <div id="album-container" class="album-grid"></div>
-  </div>
+    function parseCSVRow(text) {
+      const result = [];
+      let cell = '';
+      let inQuotes = false;
+      for (let i = 0; i < text.length; i++) {
+        const c = text[i];
+        if (c === '"') {
+          if (inQuotes && text[i + 1] === '"') { cell += '"'; i++; } 
+          else { inQuotes = !inQuotes; }
+        } else if (c === ',' && !inQuotes) {
+          result.push(cell.trim()); cell = '';
+        } else { cell += c; }
+      }
+      result.push(cell.trim());
+      return result;
+    }
 
-  <!-- ご褒美解放モーダル -->
-  <div id="reward-modal" class="modal">
-    <div class="modal-content">
-      <h2 style="color: #d9480f; margin:0;">🎉 課題クリア！</h2>
-      <p id="reward-title" style="font-weight: bold; margin-top:5px;"></p>
-      <img id="reward-img-src" src="" alt="ユニフォーム" class="reward-img" onerror="this.parentElement.innerHTML+='<p style=\\'color:red;\\'>[画像が見つかりません]</p>';">
-      <p id="reward-desc" style="font-size:14px; color:#555;"></p>
-      <button class="close-btn" onclick="closeRewardModal()">図鑑に保存して閉じる</button>
-    </div>
-  </div>
+    function parseCSV(text) {
+      const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
+      return lines.slice(1).map(line => {
+        const row = parseCSVRow(line);
+        const cleanRow = row.map(val => val.replace(/^"|"$/g, '').trim());
+        return {
+          day: cleanRow[0] || '',
+          id: cleanRow[1] || '',
+          groupId: cleanRow[2] || '',
+          groupImage: cleanRow[3] || '',
+          subject: cleanRow[4] || '',
+          type: cleanRow[5] || '',
+          title: cleanRow[6] || '',
+          question: cleanRow[7] || '',
+          answer: cleanRow[8] || '',
+          options: cleanRow[9] || ''
+        };
+      });
+    }
 
-  <script src="app.js"></script>
+    function fixImagePath(path) {
+      if (!path || path === '(空欄)') return '';
+      let cleanPath = path.trim();
+      if (cleanPath.startsWith('/')) cleanPath = cleanPath.substring(1);
+      if (!cleanPath.startsWith('http') && !cleanPath.startsWith('./')) {
+        cleanPath = './' + cleanPath;
+      }
+      return cleanPath;
+    }
+
+    function getWrongKanji() {
+      return JSON.parse(localStorage.getItem('wrong_kanji_list') || '[]');
+    }
+
+    function toggleWrongKanji(kanjiKey) {
+      let list = getWrongKanji();
+      if (list.includes(kanjiKey)) {
+        list = list.filter(k => k !== kanjiKey);
+      } else {
+        list.push(kanjiKey);
+      }
+      localStorage.setItem('wrong_kanji_list', JSON.stringify(list));
+    }
+
+    function renderSubjectButtons(tasks) {
+      const buttonContainer = document.getElementById('button-container');
+      buttonContainer.innerHTML = '';
+      const subjects = ['すべて', ...new Set(tasks.map(t => t.subject).filter(Boolean))];
+
+      subjects.forEach(subject => {
+        const btn = document.createElement('button');
+        btn.textContent = subject;
+        btn.className = 'filter-btn';
+        btn.onclick = () => {
+          if (subject === 'すべて') renderTasks(allTasks);
+          else renderTasks(allTasks.filter(t => t.subject === subject));
+        };
+        buttonContainer.appendChild(btn);
+      });
+    }
+
+    function renderTasks(tasks) {
+      const container = document.getElementById('task-container');
+      container.innerHTML = '';
+
+      let currentSubject = null;
+      let currentImage = null;
+      let currentCard = null;
+
+      tasks.forEach((task) => {
+        const isKanji = task.subject === '漢字' || task.type === 'note';
+        const isReviewDay = String(task.day) === '13';
+        const imgPath = fixImagePath(task.groupImage);
+        const hasImage = imgPath !== '';
+
+        // 13日目 復習
+        if (isKanji && isReviewDay) {
+          const reviewCard = document.createElement('div');
+          reviewCard.className = 'task-card';
+          reviewCard.style.borderColor = '#dc3545';
+          
+          const wrongList = getWrongKanji();
+          reviewCard.innerHTML = `
+            <h3 style="color:#dc3545;margin-top:0;"> 漢字の復習 (Day 13)</h3>
+            ${hasImage ? `<img src="${imgPath}" style="max-width:100%;border-radius:8px;margin-bottom:12px;">` : ''}
+            <p style="font-weight:bold;color:#dc3545;">
+              ${wrongList.length === 0 ? '🎉 復習する問題はありません！' : '復習が必要な問題番号: ' + wrongList.join(', ')}
+            </p>
+          `;
+          container.appendChild(reviewCard);
+          return;
+        }
+
+        const isSubjectChanged = task.subject !== currentSubject;
+        const isImageChanged = hasImage && imgPath !== currentImage;
+
+        if (!currentCard || isSubjectChanged || isImageChanged || isKanji) {
+          currentCard = document.createElement('div');
+          currentCard.className = 'task-card';
+
+          if (task.subject) {
+            const tagColor = isKanji ? '#28a745' : (task.subject === '算数' ? '#007bff' : '#ff8c00');
+            currentCard.innerHTML += `<span class="subject-tag" style="background-color:${tagColor}">${task.subject} (Day ${task.day})</span>`;
+          }
+
+          if (hasImage) {
+            currentCard.innerHTML += `<div style="text-align:center;margin-bottom:16px;"><img src="${imgPath}" style="max-width:100%;border-radius:8px;border:1px solid #eee;"></div>`;
+          }
+
+          container.appendChild(currentCard);
+          currentSubject = task.subject;
+          currentImage = hasImage ? imgPath : null;
+        }
+
+        // 漢字 20ボタン
+        if (isKanji) {
+          const grid = document.createElement('div');
+          grid.className = 'grid-container';
+          const wrongList = getWrongKanji();
+
+          for (let i = 1; i <= 20; i++) {
+            const itemKey = `Day${task.day}-${i}`;
+            const isWrong = wrongList.includes(itemKey);
+            const btn = document.createElement('button');
+            btn.className = 'grid-btn';
+            btn.textContent = i;
+            btn.style.backgroundColor = isWrong ? '#dc3545' : '#f8f9fa';
+            btn.style.color = isWrong ? '#ffffff' : '#333333';
+
+            btn.onclick = () => {
+              toggleWrongKanji(itemKey);
+              const nowWrong = getWrongKanji().includes(itemKey);
+              btn.style.backgroundColor = nowWrong ? '#dc3545' : '#f8f9fa';
+              btn.style.color = nowWrong ? '#ffffff' : '#333333';
+            };
+            grid.appendChild(btn);
+          }
+          currentCard.appendChild(grid);
+          return;
+        }
+
+        // 算数・社会
+        if (task.title || task.question) {
+          const itemBox = document.createElement('div');
+          itemBox.style.cssText = 'padding:10px 0; border-top:1px dashed #eee;';
+          itemBox.innerHTML = `
+            <div style="font-weight:bold;margin-bottom:6px;">${[task.title, task.question].filter(Boolean).join(' ')}</div>
+            <div style="display:flex;gap:8px;">
+              <input type="text" placeholder="解答" style="flex:1;padding:8px;border:1px solid #ccc;border-radius:4px;">
+              <button style="padding:8px 16px;background:#007bff;color:#fff;border:none;border-radius:4px;font-weight:bold;cursor:pointer;">判定</button>
+            </div>
+          `;
+
+          const input = itemBox.querySelector('input');
+          const button = itemBox.querySelector('button');
+          button.onclick = () => {
+            if (input.value.trim() === task.answer) alert('⭕ 正解です！');
+            else alert(`❌ 不正解です。\n正解: ${task.answer}`);
+          };
+
+          currentCard.appendChild(itemBox);
+        }
+      });
+    }
+  </script>
 </body>
 </html>
