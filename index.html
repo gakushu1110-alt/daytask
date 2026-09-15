@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>day-task-app</title>
+  <style>
+    body { font-family: sans-serif; max-width: 650px; margin: 0 auto; padding: 20px; background-color: #f4f7f6; }
+    h1 { color: #333; font-size: 24px; text-align: center; margin-bottom: 10px; }
+    
+    /* メニュータブ */
+    .nav-tabs { display: flex; gap: 8px; justify-content: center; margin-bottom: 15px; flex-wrap: wrap; }
+    .nav-btn { padding: 10px 16px; cursor: pointer; border-radius: 8px; border: 1px solid #ccc; background: #fff; font-size: 14px; font-weight: bold; }
+    .nav-btn.active { background: #007bff; color: white; border-color: #007bff; }
+    .nav-btn.album-btn { background: #28a745; color: white; border-color: #28a745; }
+
+    /* 日数切り替えボタン */
+    .day-selector { margin-bottom: 20px; display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+    .day-btn { padding: 8px 14px; cursor: pointer; border-radius: 6px; border: 1px solid #bbb; background: #fff; font-size: 13px; font-weight: bold; }
+    .day-btn.active { background: #6f42c1; color: white; border-color: #6f42c1; }
+
+    /* カード・枠組み */
+    .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 20px; }
+    .badge { display: inline-block; padding: 4px 8px; border-radius: 4px; color: white; font-weight: bold; font-size: 12px; margin-bottom: 10px; }
+    .bg-math { background-color: #007bff; }
+    .bg-science { background-color: #28a745; }
+    .bg-social { background-color: #fd7e14; }
+    .bg-kanji { background-color: #6f42c1; }
+    
+    /* 画像グループの表示エリア */
+    .group-image-container { background: #fff; border: 2px solid #ddd; padding: 10px; border-radius: 8px; margin-bottom: 15px; text-align: center; }
+    .group-img { max-width: 100%; height: auto; border-radius: 6px; }
+
+    /* 漢字：横5×縦4のボタン配置 */
+    .kanji-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-top: 15px; }
+    .kanji-num-btn { padding: 12px 4px; background: #f8f9fa; border: 2px solid #dee2e6; border-radius: 8px; font-size: 15px; font-weight: bold; color: #333; cursor: pointer; text-align: center; }
+    .kanji-num-btn.selected { background: #fff3bf; border-color: #f59f00; color: #d9480f; box-shadow: 0 2px 4px rgba(245, 159, 0, 0.3); }
+
+    /* 選択肢ボタン (ア〜エ) */
+    .options-grid { display: grid; gap: 8px; margin-top: 10px; }
+    .option-btn { padding: 12px; border: 2px solid #e0e0e0; background: white; border-radius: 8px; cursor: pointer; text-align: left; font-size: 16px; font-weight: bold; }
+    .option-btn:hover { border-color: #007bff; background-color: #f0f7ff; }
+
+    /* 記述式入力ボックス */
+    .input-box { width: 100%; padding: 12px; font-size: 16px; box-sizing: border-box; border: 2px solid #ccc; border-radius: 8px; margin: 10px 0; }
+    .submit-btn { padding: 10px 20px; background-color: #007bff; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; width: 100%; }
+
+    /* 図鑑ギャラリー */
+    .album-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; }
+    .album-card { background: white; border: 2px solid #e0e0e0; border-radius: 10px; padding: 12px; text-align: center; }
+    .album-card.locked { background: #e9ecef; border-style: dashed; color: #888; }
+    .album-img { width: 100%; height: 160px; object-fit: contain; margin-bottom: 8px; }
+
+    /* 解放ポップアップ (モーダル) */
+    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); justify-content: center; align-items: center; z-index: 1000; }
+    .modal-content { background: white; padding: 25px; border-radius: 16px; text-align: center; max-width: 400px; width: 85%; }
+    .reward-img { width: 200px; height: 200px; object-fit: contain; margin: 15px 0; }
+    .close-btn { padding: 10px 20px; background: #28a745; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 16px; }
+
+    /* フィードバック */
+    .feedback { font-weight: bold; margin-top: 10px; font-size: 16px; }
+    .correct { color: #28a745; }
+    .incorrect { color: #dc3545; }
+    .status-box { padding: 12px; border-radius: 8px; margin-bottom: 15px; font-weight: bold; }
+  </style>
+</head>
+<body>
+
+  <h1>day-task-app</h1>
+
+  <!-- メイン切り替えナビ -->
+  <div class="nav-tabs">
+    <button class="nav-btn active" id="tab-study" onclick="showTab('study')">📖 学習メニュー</button>
+    <button class="nav-btn album-btn" id="tab-album" onclick="showTab('album')">🏆 ユニフォーム図鑑</button>
+  </div>
+
+  <!-- 学習エリア -->
+  <div id="study-view">
+    <div class="day-selector">
+      <button class="day-btn active" onclick="switchDay(11)">11日目</button>
+      <button class="day-btn" onclick="switchDay(12)">12日目</button>
+      <button class="day-btn" onclick="switchDay(13)">13日目 (テスト)</button>
+    </div>
+
+    <h2 id="page-title" style="text-align: center;">11日目の学習課題</h2>
+    <div id="status-container"></div>
+    <div id="main-container"></div>
+  </div>
+
+  <!-- 図鑑エリア -->
+  <div id="album-view" style="display: none;">
+    <h2 style="text-align: center;">獲得ユニフォームカード</h2>
+    <div id="album-container" class="album-grid"></div>
+  </div>
+
+  <!-- ご褒美解放モーダル -->
+  <div id="reward-modal" class="modal">
+    <div class="modal-content">
+      <h2 style="color: #d9480f; margin:0;">🎉 課題クリア！</h2>
+      <p id="reward-title" style="font-weight: bold; margin-top:5px;"></p>
+      <img id="reward-img-src" src="" alt="ユニフォーム" class="reward-img" onerror="this.parentElement.innerHTML+='<p style=\\'color:red;\\'>[画像が見つかりません]</p>';">
+      <p id="reward-desc" style="font-size:14px; color:#555;"></p>
+      <button class="close-btn" onclick="closeRewardModal()">図鑑に保存して閉じる</button>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
