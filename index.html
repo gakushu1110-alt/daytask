@@ -21,7 +21,8 @@
   <div id="task-container">データを読み込み中...</div>
 
   <script>
-    const SPREADSHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTzYoXb4M6qc3sfcufFt1c223xm8N8HO5OtzsK4rwWy9wt7orxWX6XgEVJxMv_rwHASopdqnvBnn_OW/pub?output=csv';
+    // ★ご提示いただいた新しいスプレッドシートURLに更新し、キャッシュ破棄パラメータを追加
+    const SPREADSHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS5zB1_bZuI8Vk7FwuyP3OWjgRVGzpP9LZ542955Kqs8adn7ustm6FB_zUNWm9Jo2py9BYGddk1Z_Bz/pub?output=csv';
     let allTasks = [];
 
     const DEFAULT_KANJI_TASK = {
@@ -35,7 +36,8 @@
 
     async function fetchData() {
       try {
-        const response = await fetch(SPREADSHEET_URL);
+        const cacheBuster = '&_t=' + new Date().getTime();
+        const response = await fetch(SPREADSHEET_URL + cacheBuster);
         if (!response.ok) throw new Error('CSV取得エラー');
         const data = await response.text();
         allTasks = parseCSV(data);
@@ -98,14 +100,13 @@
       return cleanPath;
     }
 
-    // ★全角・半角・スペースの正規化（数字・英字の全角を半角化）
     function normalizeText(str) {
       if (!str) return '';
       return str
         .replace(/[Ａ-Ｚａ-ｚ０-９]/g, function(s) {
           return String.fromCharCode(s.charCodeAt(0) - 0xFEE0);
         })
-        .replace(/\s+/g, '') // 空白除去
+        .replace(/\s+/g, '')
         .trim();
     }
 
@@ -256,7 +257,6 @@
           const button = itemBox.querySelector('button');
 
           button.onclick = () => {
-            // 入力値と正解データの双方を正規化して判定
             const userVal = normalizeText(input.value);
             const correctVal = normalizeText(task.answer);
 
