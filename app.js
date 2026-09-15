@@ -1,7 +1,6 @@
 // ==========================================
 // 0. Googleスプレッドシート連携設定
 // ==========================================
-// スプレッドシートのWeb公開CSV URLを直接指定します
 const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTzYoXb4M6qc3sfcufFt1c223xm8N8HO5OtzsK4rwWy9wt7orxWX6XgEVJxMv_rwHASopdqnvBnn_OW/pub?output=csv";
 
 // ==========================================
@@ -33,7 +32,7 @@ document.addEventListener("DOMContentLoaded", () => {
   loadDayData(currentDay);
 });
 
-// CSV1行パース関数（改行・カンマ考慮）
+// CSV1行パース関数
 function parseCSVLine(line) {
   const result = [];
   let cur = '';
@@ -63,7 +62,7 @@ async function loadDayData(day) {
   if (statusContainer) statusContainer.innerHTML = "";
 
   try {
-    const response = await fetch(SHEET_CSV_URL);
+    const response = await fetch(SHEET_CSV_URL, { cache: "no-store" });
     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
     
     const csvText = await response.text();
@@ -83,10 +82,9 @@ async function loadDayData(day) {
           subject: row[4] || "全般",
           badgeClass: getBadgeClass(row[4]),
           type: row[5] || "input",
-          title: row[6] || "",
-          question: row[7] || "",
-          answer: row[8] || "",
-          options: row[9] ? row[9].split(",").map(s => s.trim()) : [],
+          question: row[6] || "",   // G列：問題文
+          answer: row[7] || "",     // H列：正解
+          options: row[8] ? row[8].split(",").map(s => s.trim()) : [], // I列：選択肢
           explanation: ""
         });
       }
@@ -100,7 +98,7 @@ async function loadDayData(day) {
     if (container) {
       container.innerHTML = `<div class="card" style="text-align:center; color:red;">
         <p>データの読み込みに失敗しました。</p>
-        <p style="font-size:12px; color:#666;">（詳細: ${error.message}）<br>ローカルファイル（file://）で直接開いている場合は、Webサーバー経由（Webサーバー機能やGitHub Pages等）で開いているかご確認ください。</p>
+        <p style="font-size:12px; color:#666;">（詳細: ${error.message}）</p>
       </div>`;
     }
     return;
@@ -184,7 +182,7 @@ function renderDay11(container) {
     return;
   }
 
-  currentDayTasks.forEach((item, index) => {
+  currentDayTasks.forEach((item) => {
     if (item.groupImage && item.groupImage.trim() !== "" && !renderedGroups.includes(item.groupId)) {
       const imgContainer = document.createElement("div");
       imgContainer.className = "group-image-container";
@@ -202,7 +200,7 @@ function renderDay11(container) {
 
     let html = `
       <span class="badge ${item.badgeClass}">${item.subject}</span>
-      <p style="white-space: pre-wrap;">${item.question}</p>
+      <p style="white-space: pre-wrap; font-weight: bold; margin-top: 8px;">${item.question}</p>
     `;
 
     if (isCompleted) {
