@@ -19,12 +19,14 @@
     .options-container { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
     .option-btn { padding: 6px 12px; border: 1px solid #007bff; background: #e7f1ff; color: #007bff; border-radius: 6px; cursor: pointer; font-weight: bold; }
     
-    /* ユニフォームカード */
-    .reward-card { border: 2px solid #ffc107; border-radius: 12px; padding: 16px; margin-bottom: 20px; background: linear-gradient(135deg, #fffdf0 0%, #fff9e6 100%); text-align: center; }
+    /* 選手カード演出用スタイル */
+    .reward-card { border: 2px solid #ffc107; border-radius: 12px; padding: 16px; margin-bottom: 20px; background: linear-gradient(135deg, #fffdf0 0%, #fff9e6 100%); text-align: center; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
     .reward-badge { display: inline-block; padding: 4px 12px; background: #ffc107; color: #000; font-weight: bold; border-radius: 12px; font-size: 12px; margin-bottom: 8px; }
-    .jersey-display { font-size: 48px; margin: 8px 0; line-height: 1; }
-    .jersey-title { font-size: 18px; font-weight: bold; color: #333; margin-bottom: 4px; }
-    .jersey-desc { font-size: 13px; color: #666; margin: 0; }
+    .locked-box { font-size: 56px; margin: 12px 0; background: #e9ecef; border-radius: 12px; padding: 20px; border: 2px dashed #adb5bd; }
+    .player-img-container { margin: 12px 0; }
+    .player-img { max-width: 100%; height: auto; border-radius: 12px; border: 3px solid #ffc107; box-shadow: 0 4px 10px rgba(0,0,0,0.15); }
+    .reward-title { font-size: 18px; font-weight: bold; color: #333; margin-bottom: 4px; }
+    .reward-desc { font-size: 13px; color: #666; margin: 0; }
   </style>
 </head>
 <body>
@@ -38,15 +40,6 @@
     let allTasks = [];
     let currentDay = null;
     let currentSubjectFilter = 'すべて';
-
-    // FIFA国マスターデータ定義（特殊Unicode制御文字を除去）
-    const COUNTRY_MASTER = [
-      { week: 1, flag: '🇦🇷', name: 'アルゼンチン代表', numbers: [10, 9, 7, 11, 20, 23] },
-      { week: 2, flag: '🇫🇷', name: 'フランス代表', numbers: [10, 7, 9, 11, 8, 16] },
-      { week: 3, flag: '🇪🇸', name: 'スペイン代表', numbers: [10, 9, 7, 11, 6, 1] },
-      { week: 4, flag: '🇬🇧', name: 'イングランド代表', numbers: [9, 10, 7, 11, 4, 1] },
-      { week: 5, flag: '🇧🇷', name: 'ブラジル代表', numbers: [10, 9, 7, 11, 8, 1] }
-    ];
 
     document.addEventListener('DOMContentLoaded', fetchData);
 
@@ -179,30 +172,39 @@
       });
     }
 
-    function renderUniformCard(dayNum) {
-      const weekIndex = Math.floor((dayNum - 1) / 7);
-      const dayInWeek = ((dayNum - 1) % 7) + 1;
-      const country = COUNTRY_MASTER[weekIndex] || COUNTRY_MASTER[0];
+    // ★ 達成報酬：サッカー選手カード生成（/images/player/weekX.jpg パス指定）
+    function renderRewardCard(dayNum) {
+      const weekNum = Math.floor((dayNum - 1) / 7) + 1; // 第〇週
+      const dayInWeek = ((dayNum - 1) % 7) + 1;        // 週の1〜7日目
+      const remainingDays = 7 - dayInWeek;              // 解放までの残り日数
 
       const card = document.createElement('div');
       card.className = 'reward-card';
 
       if (dayInWeek === 7) {
-        card.style.borderColor = '#dc3545';
-        card.style.background = 'linear-gradient(135deg, #fff5f5 0%, #ffe3e3 100%)';
+        // 7日目：コンプリート（指定フォルダの選手画像解放）
+        const imageBasePath = `./images/player/week${weekNum}`;
+
+        card.style.borderColor = '#ffc107';
+        card.style.background = 'linear-gradient(135deg, #fffdf0 0%, #ffeaa7 100%)';
         card.innerHTML = `
-          <span class="reward-badge" style="background:#dc3545;color:#fff;">🔥 7日目育成テスト当日限定ボーナス</span>
-          <div class="jersey-display">👕✨</div>
-          <div class="jersey-title">${country.flag} ${country.name} アウェーユニフォーム</div>
-          <p class="jersey-desc">1週間完走おめでとう！スペシャル達成アウェーモデルGET！</p>
+          <span class="reward-badge" style="background:#dc3545;color:#fff;">🔥 第${weekNum}週 達成限定ボーナス！</span>
+          <div class="reward-title">🎉 1週間完走おめでとう！</div>
+          <p class="reward-desc">今週のスペシャルサッカー選手カードGET！</p>
+          <div class="player-img-container">
+            <img src="${imageBasePath}.jpg" alt="今週のスター選手" class="player-img" 
+                 onerror="if(this.src.endsWith('.jpg')){ this.src='${imageBasePath}.png'; } else { this.onerror=null; this.parentElement.innerHTML='<p style=\'color:red;font-size:12px;margin:12px 0;\'>⚠️ 画像が見つかりません<br>(./images/player/week${weekNum}.jpg または .png)</p>'; }">
+          </div>
         `;
       } else {
-        const number = country.numbers[dayInWeek - 1] || 10;
+        // 1〜6日目：ワクワク演出（シークレット状態）
         card.innerHTML = `
-          <span class="reward-badge">👕 第${weekIndex + 1}週 獲得ユニフォーム</span>
-          <div class="jersey-display">👕</div>
-          <div class="jersey-title">${country.flag} ${country.name} メインユニフォーム</div>
-          <p class="jersey-desc">背番号 <strong>No.${number}</strong> 解放！</p>
+          <span class="reward-badge">🔒 第${weekNum}週 達成ボーナスカード</span>
+          <div class="locked-box">❓⚽❓</div>
+          <div class="reward-title">今週のスター選手はだれかな？どこの国かな？</div>
+          <p class="reward-desc" style="margin-top:6px;font-weight:bold;color:#007bff;">
+            7日目の学習達成でカード解放！ (あと ${remainingDays} 日)
+          </p>
         `;
       }
       return card;
@@ -214,8 +216,9 @@
 
       const dayNum = Number(currentDay) || 1;
 
+      // 「すべて」または「漢字」表示時に報酬カードを表示
       if (currentSubjectFilter === 'すべて' || currentSubjectFilter === '漢字') {
-        container.appendChild(renderUniformCard(dayNum));
+        container.appendChild(renderRewardCard(dayNum));
       }
 
       const dayTasks = allTasks.filter(t => String(t.day) === String(currentDay));
