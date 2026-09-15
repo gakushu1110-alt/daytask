@@ -135,6 +135,33 @@
       localStorage.setItem('wrong_kanji_list', JSON.stringify(list));
     }
 
+    // 完了済みの問題IDを記録・判定する関数
+    function getCompletedTasks() {
+      return JSON.parse(localStorage.getItem('completed_tasks') || '[]');
+    }
+
+    function markTaskCompleted(taskId) {
+      if (!taskId) return;
+      let completed = getCompletedTasks();
+      if (!completed.includes(taskId)) {
+        completed.push(taskId);
+        localStorage.setItem('completed_tasks', JSON.stringify(completed));
+      }
+    }
+
+    function isDayCompleted(dayNum) {
+      const dayTasks = allTasks.filter(t => String(t.day) === String(dayNum));
+      if (dayTasks.length === 0) return false;
+
+      // 通常問題（タイトルか問題文があるもの）
+      const normalTasks = dayTasks.filter(t => t.title || t.question);
+      if (normalTasks.length === 0) return true;
+
+      const completed = getCompletedTasks();
+      // その日のすべての通常問題が回答済みか判定
+      return normalTasks.every(t => completed.includes(t.id));
+    }
+
     function renderDayButtons(days) {
       const dayContainer = document.getElementById('day-container');
       dayContainer.innerHTML = '';
@@ -172,7 +199,7 @@
       });
     }
 
-    // ★ 達成報酬：サッカー選手カード生成（/images/player/weekX.jpg パス指定）
+    // ★ 達成報酬カード生成（7日目の全問クリア判定を追加）
     function renderRewardCard(dayNum) {
       const weekNum = Math.floor((dayNum - 1) / 7) + 1; // 第〇週
       const dayInWeek = ((dayNum - 1) % 7) + 1;        // 週の1〜7日目
@@ -182,20 +209,34 @@
       card.className = 'reward-card';
 
       if (dayInWeek === 7) {
-        // 7日目：コンプリート（指定フォルダの選手画像解放）
-        const imageBasePath = `./images/player/week${weekNum}`;
+        // 7日目の学習がすべて完了しているかチェック
+        const completed = isDayCompleted(dayNum);
 
-        card.style.borderColor = '#ffc107';
-        card.style.background = 'linear-gradient(135deg, #fffdf0 0%, #ffeaa7 100%)';
-        card.innerHTML = `
-          <span class="reward-badge" style="background:#dc3545;color:#fff;">🔥 第${weekNum}週 達成限定ボーナス！</span>
-          <div class="reward-title">🎉 1週間完走おめでとう！</div>
-          <p class="reward-desc">今週のスペシャルサッカー選手カードGET！</p>
-          <div class="player-img-container">
-            <img src="${imageBasePath}.jpg" alt="今週のスター選手" class="player-img" 
-                 onerror="if(this.src.endsWith('.jpg')){ this.src='${imageBasePath}.png'; } else { this.onerror=null; this.parentElement.innerHTML='<p style=\'color:red;font-size:12px;margin:12px 0;\'>⚠️ 画像が見つかりません<br>(./images/player/week${weekNum}.jpg または .png)</p>'; }">
-          </div>
-        `;
+        if (completed) {
+          // 7日目を全クリア済み：画像解放！
+          const imageBasePath = `./images/player/week${weekNum}`;
+          card.style.borderColor = '#ffc107';
+          card.style.background = 'linear-gradient(135deg, #fffdf0 0%, #ffeaa7 100%)';
+          card.innerHTML = `
+            <span class="reward-badge" style="background:#dc3545;color:#fff;">🔥 第${weekNum}週 達成限定ボーナス！</span>
+            <div class="reward-title">🎉 1週間コンプリートおめでとう！</div>
+            <p class="reward-desc">今週のスペシャルサッカー選手カードGET！</p>
+            <div class="player-img-container">
+              <img src="${imageBasePath}.jpg" alt="今週のスター選手" class="player-img" 
+                   onerror="if(this.src.endsWith('.jpg')){ this.src='${imageBasePath}.png'; } else { this.onerror=null; this.parentElement.innerHTML='<p style=\'color:red;font-size:12px;margin:12px 0;\'>⚠️ 画像が見つかりません<br>(./images/player/week${weekNum}.jpg または .png)</p>'; }">
+            </div>
+          `;
+        } else {
+          // 7日目未クリア：ロック表示
+          card.innerHTML = `
+            <span class="reward-badge" style="background:#dc3545;color:#fff;">🔒 7日目限定ボーナス（ロック中）</span>
+            <div class="locked-box">❓⚽❓</div>
+            <div class="reward-title">本日の学習を全クリアしてカードを解放しよう！</div>
+            <p class="reward-desc" style="margin-top:6px;font-weight:bold;color:#dc3545;">
+              今日（7日目）の問題を解き終わるとスペシャル画像が解放されます！
+            </p>
+          `;
+        }
       } else {
         // 1〜6日目：ワクワク演出（シークレット状態）
         card.innerHTML = `
@@ -361,6 +402,10 @@
             } else {
               alert(`❌ 不正解です。\n正解: ${task.answer}`);
             }
+
+            // 判定ボタンを押した時点で完了済みとしてマークし、画面を更新して全クリア判定を行う
+            markTaskCompleted(task.id);
+            renderTasks();
           };
 
           currentCard.appendChild(itemBox);
