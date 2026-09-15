@@ -59,6 +59,17 @@ function parseCSV(text) {
   });
 }
 
+// 画像パスの整形関数（パスズレを自動防止）
+function fixImagePath(path) {
+  if (!path || path === '(空欄)') return '';
+  let cleanPath = path.trim();
+  if (cleanPath.startsWith('/')) cleanPath = cleanPath.substring(1);
+  if (!cleanPath.startsWith('http') && !cleanPath.startsWith('./')) {
+    cleanPath = './' + cleanPath;
+  }
+  return cleanPath;
+}
+
 // 教科切り替えボタン
 function renderSubjectButtons(tasks) {
   const buttonContainer = document.getElementById('button-container') || document.getElementById('filter-buttons');
@@ -113,8 +124,9 @@ function renderTasks(tasks) {
 
   tasks.forEach((task) => {
     const isKanji = task.subject === '漢字';
-    const isReviewDay = String(task.day) === '13'; // 13日目を復習日と判定
-    const hasImage = task.groupImage && task.groupImage !== '(空欄)' && task.groupImage.trim() !== '';
+    const isReviewDay = String(task.day) === '13';
+    const imgPath = fixImagePath(task.groupImage);
+    const hasImage = imgPath !== '';
 
     // --- 【13日目：漢字復習モード】 ---
     if (isKanji && isReviewDay) {
@@ -128,7 +140,7 @@ function renderTasks(tasks) {
 
       if (hasImage) {
         const img = document.createElement('img');
-        img.src = task.groupImage;
+        img.src = imgPath;
         img.style.cssText = 'max-width: 100%; border-radius: 8px; margin-bottom: 12px;';
         reviewCard.appendChild(img);
       }
@@ -148,9 +160,9 @@ function renderTasks(tasks) {
       return;
     }
 
-    // --- カード枠の作成条件（教科が変わった場合、画像が変わった場合、漢字の場合） ---
+    // --- カード枠の作成条件 ---
     const isSubjectChanged = task.subject !== currentSubject;
-    const isImageChanged = hasImage && task.groupImage !== currentImage;
+    const isImageChanged = hasImage && imgPath !== currentImage;
 
     if (!currentCard || isSubjectChanged || isImageChanged || isKanji) {
       currentCard = document.createElement('div');
@@ -167,7 +179,7 @@ function renderTasks(tasks) {
         const imgContainer = document.createElement('div');
         imgContainer.style.cssText = 'margin-bottom: 16px; text-align: center;';
         const img = document.createElement('img');
-        img.src = task.groupImage;
+        img.src = imgPath;
         img.style.cssText = 'max-width: 100%; height: auto; border-radius: 8px; border: 1px solid #eee;';
         imgContainer.appendChild(img);
         currentCard.appendChild(imgContainer);
@@ -175,7 +187,7 @@ function renderTasks(tasks) {
 
       listArea.appendChild(currentCard);
       currentSubject = task.subject;
-      currentImage = hasImage ? task.groupImage : null;
+      currentImage = hasImage ? imgPath : null;
     }
 
     // --- 【11・12日目：漢字（5×4の20問題ボタン）】 ---
