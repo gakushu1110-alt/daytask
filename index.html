@@ -18,19 +18,19 @@
     .grid-btn { padding: 10px 0; font-weight: bold; border-radius: 6px; border: 1px solid #ccc; cursor: pointer; }
     .options-container { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
     .option-btn { padding: 6px 12px; border: 1px solid #007bff; background: #e7f1ff; color: #007bff; border-radius: 6px; cursor: pointer; font-weight: bold; }
-    .uniform-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; text-align: center; margin-top: 10px; }
-    .uniform-item { border: 1px solid #ffc107; border-radius: 8px; padding: 8px; background: #fff9e6; font-size: 24px; }
+    
+    /* ユニフォームカード用スタイル */
+    .reward-card { border: 2px solid #ffc107; border-radius: 12px; padding: 16px; margin-bottom: 20px; background: linear-gradient(135deg, #fffdf0 0%, #fff9e6 100%); text-align: center; }
+    .reward-badge { display: inline-block; padding: 4px 12px; background: #ffc107; color: #000; font-weight: bold; border-radius: 12px; font-size: 12px; margin-bottom: 8px; }
+    .jersey-display { font-size: 48px; margin: 8px 0; line-height: 1; }
+    .jersey-title { font-size: 18px; font-weight: bold; color: #333; margin-bottom: 4px; }
+    .jersey-desc { font-size: 13px; color: #666; margin: 0; }
   </style>
 </head>
 <body>
 
-  <!-- Day選択ナビゲーション -->
   <div id="day-container" class="nav-container"></div>
-  
-  <!-- 教科フィルター -->
   <div id="button-container" class="filter-container"></div>
-  
-  <!-- タスク表示エリア -->
   <div id="task-container">データを読み込み中...</div>
 
   <script>
@@ -39,7 +39,14 @@
     let currentDay = null;
     let currentSubjectFilter = 'すべて';
 
-    const UNIFORMS = ['⚽', '⚾', '🏀', '🏐', '🏈', '🎾', '🏓', '🥊', '🥋', '🚴'];
+    // FIFA国マスターデータ定義
+    const COUNTRY_MASTER = [
+      { week: 1, flag: '🇦🇷', name: 'アルゼンチン代表', numbers: [10, 9, 7, 11, 20, 23] },
+      { week: 2, flag: '🇫🇷', name: 'フランス代表', numbers: [10, 7, 9, 11, 8, 16] },
+      { week: 3, flag: '🇪🇸', name: 'スペイン代表', numbers: [10, 9, 7, 11, 6, 1] },
+      { week: 4, flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿', name: 'イングランド代表', numbers: [9, 10, 7, 11, 4, 1] },
+      { week: 5, flag: '🇧🇷', name: 'ブラジル代表', numbers: [10, 9, 7, 11, 8, 1] }
+    ];
 
     document.addEventListener('DOMContentLoaded', fetchData);
 
@@ -52,7 +59,6 @@
         
         allTasks = parseCSV(data);
         
-        // 全Dayを取得してソート（11, 12, 13...）
         const days = [...new Set(allTasks.map(t => String(t.day)).filter(Boolean))].sort((a,b) => Number(a) - Number(b));
         if (days.length > 0) {
           currentDay = days[0];
@@ -136,7 +142,6 @@
       localStorage.setItem('wrong_kanji_list', JSON.stringify(list));
     }
 
-    // Dayボタン描画
     function renderDayButtons(days) {
       const dayContainer = document.getElementById('day-container');
       dayContainer.innerHTML = '';
@@ -155,7 +160,6 @@
       });
     }
 
-    // 教科フィルター描画
     function renderSubjectButtons(dayTasks) {
       const buttonContainer = document.getElementById('button-container');
       buttonContainer.innerHTML = '';
@@ -175,39 +179,55 @@
       });
     }
 
-    // タスク描画メイン
+    // ユニフォームカード生成関数
+    function renderUniformCard(dayNum) {
+      const weekIndex = Math.floor((dayNum - 1) / 7);
+      const dayInWeek = ((dayNum - 1) % 7) + 1; // 1〜7
+      const country = COUNTRY_MASTER[weekIndex] || COUNTRY_MASTER[0];
+
+      const card = document.createElement('div');
+      card.className = 'reward-card';
+
+      if (dayInWeek === 7) {
+        // 7日目：スペシャルアウェーユニフォーム
+        card.style.borderColor = '#dc3545';
+        card.style.background = 'linear-gradient(135deg, #fff5f5 0%, #ffe3e3 100%)';
+        card.innerHTML = `
+          <span class="reward-badge" style="background:#dc3545;color:#fff;">🔥 7日目育成テスト当日限定ボーナス</span>
+          <div class="jersey-display">👕✨</div>
+          <div class="jersey-title">${country.flag} ${country.name} アウェーユニフォーム</div>
+          <p class="jersey-desc">1週間完走おめでとう！スペシャル達成アウェーモデルGET！</p>
+        `;
+      } else {
+        // 1〜6日目：メインユニフォーム（背番号付き）
+        const number = country.numbers[dayInWeek - 1] || 10;
+        card.innerHTML = `
+          <span class="reward-badge">👕 第${weekIndex + 1}週 獲得ユニフォーム</span>
+          <div class="jersey-display">👕</div>
+          <div class="jersey-title">${country.flag} ${country.name} メインユニフォーム</div>
+          <p class="jersey-desc">背番号 <strong>No.${number}</strong> 解放！</p>
+        `;
+      }
+      return card;
+    }
+
     function renderTasks() {
       const container = document.getElementById('task-container');
       container.innerHTML = '';
 
-      // 指定されたDayのデータのみ抽出
+      const dayNum = Number(currentDay) || 1;
+
+      // ★ ユニフォームコレクション（達成ボーナスカード）を表示
+      if (currentSubjectFilter === 'すべて' || currentSubjectFilter === '漢字') {
+        container.appendChild(renderUniformCard(dayNum));
+      }
+
       const dayTasks = allTasks.filter(t => String(t.day) === String(currentDay));
       renderSubjectButtons(dayTasks);
 
-      // 教科フィルター適用
       const tasksToDisplay = currentSubjectFilter === 'すべて' 
         ? dayTasks 
         : dayTasks.filter(t => t.subject === currentSubjectFilter);
-
-      // ★ 7日ごと（Day 7, 14, 21...）のごほうび：ユニフォームコレクション表示
-      if (Number(currentDay) % 7 === 0 && (currentSubjectFilter === 'すべて' || currentSubjectFilter === '漢字')) {
-        const rewardCard = document.createElement('div');
-        rewardCard.className = 'task-card';
-        rewardCard.style.borderColor = '#ffc107';
-        rewardCard.style.backgroundColor = '#fffdf0';
-        
-        let rewardHtml = `
-          <h3 style="color:#d39e00;margin-top:0;">🎉 7日間達成ごほうび！ユニフォームコレクション</h3>
-          <p style="font-size:14px;color:#666;">7日間の学習達成おめでとう！ゲットしたユニフォームコレクションです。</p>
-          <div class="uniform-grid">
-        `;
-        UNIFORMS.forEach((u, idx) => {
-          rewardHtml += `<div class="uniform-item" title="No.${idx+1}">${u}</div>`;
-        });
-        rewardHtml += `</div>`;
-        rewardCard.innerHTML = rewardHtml;
-        container.appendChild(rewardCard);
-      }
 
       if (tasksToDisplay.length === 0) {
         container.innerHTML += '<p>この日の該当する問題はありません。</p>';
@@ -275,7 +295,7 @@
           currentImage = hasImage ? imgPath : null;
         }
 
-        // 漢字ノートモード（1〜20のグリッド表示）
+        // 漢字ノートモード
         if (isKanji) {
           if (task.question) {
             const qTitle = document.createElement('p');
