@@ -14,8 +14,6 @@ async function fetchData() {
     const data = await response.text();
     allTasks = parseCSV(data);
     
-    console.log('取得した全タスク:', allTasks);
-
     renderSubjectButtons(allTasks);
     renderTasks(allTasks);
   } catch (error) {
@@ -23,7 +21,7 @@ async function fetchData() {
   }
 }
 
-// CSVパーサー
+// CSVパーサー（1行解析）
 function parseCSVRow(text) {
   const result = [];
   let cell = '';
@@ -41,22 +39,25 @@ function parseCSVRow(text) {
   return result;
 }
 
+// CSV全体を解析
 function parseCSV(text) {
   const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
+  
   return lines.slice(1).map(line => {
     const row = parseCSVRow(line);
     const cleanRow = row.map(val => val.replace(/^"|"$/g, '').trim());
+
     return {
-      day: cleanRow[0] || '',
-      id: cleanRow[1] || '',
-      groupId: cleanRow[2] || '',
-      groupImage: cleanRow[3] || '',
-      subject: cleanRow[4] || '',
-      type: cleanRow[5] || '',
-      title: cleanRow[6] || '',
-      question: cleanRow[7] || '',
-      answer: cleanRow[8] || '',
-      options: cleanRow[9] || ''
+      day: cleanRow[0] || '',         // A列: day
+      id: cleanRow[1] || '',          // B列: id
+      groupId: cleanRow[2] || '',     // C列: groupId
+      groupImage: cleanRow[3] || '',  // D列: groupImage
+      subject: cleanRow[4] || '',     // E列: subject
+      type: cleanRow[5] || '',        // F列: type
+      title: cleanRow[6] || '',       // G列: title
+      question: cleanRow[7] || '',    // H列: question
+      answer: cleanRow[8] || '',      // I列: answer
+      options: cleanRow[9] || ''      // J列: options
     };
   });
 }
@@ -120,17 +121,12 @@ function renderTasks(tasks) {
   }
   listArea.innerHTML = '';
 
-  if (!tasks || tasks.length === 0) {
-    listArea.innerHTML = '<p>表示できるデータがありません。</p>';
-    return;
-  }
-
   let currentSubject = null;
   let currentImage = null;
   let currentCard = null;
 
   tasks.forEach((task) => {
-    const isKanji = task.subject === '漢字' || task.type === 'kanji';
+    const isKanji = task.subject === '漢字' || task.type === 'note';
     const isReviewDay = String(task.day) === '13';
     const imgPath = fixImagePath(task.groupImage);
     const hasImage = imgPath !== '';
@@ -167,7 +163,7 @@ function renderTasks(tasks) {
       return;
     }
 
-    // --- 新しいカードの作成 ---
+    // --- カード枠の作成条件 ---
     const isSubjectChanged = task.subject !== currentSubject;
     const isImageChanged = hasImage && imgPath !== currentImage;
 
@@ -228,36 +224,36 @@ function renderTasks(tasks) {
     }
 
     // --- 通常問題（算数・社会） ---
-    const itemBox = document.createElement('div');
-    itemBox.style.cssText = 'padding: 10px 0; border-top: 1px dashed #eee;';
-
     if (task.title || task.question) {
+      const itemBox = document.createElement('div');
+      itemBox.style.cssText = 'padding: 10px 0; border-top: 1px dashed #eee;';
+
       const qText = document.createElement('div');
       qText.style.cssText = 'font-weight: bold; margin-bottom: 6px; font-size: 15px;';
       qText.textContent = [task.title, task.question].filter(Boolean).join(' ');
       itemBox.appendChild(qText);
+
+      const inputRow = document.createElement('div');
+      inputRow.style.cssText = 'display: flex; gap: 8px;';
+
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.placeholder = '解答';
+      input.style.cssText = 'flex: 1; padding: 8px 12px; border: 1px solid #ccc; border-radius: 4px;';
+
+      const button = document.createElement('button');
+      button.textContent = '判定';
+      button.style.cssText = 'padding: 8px 16px; background-color: #007bff; color: #fff; border: none; border-radius: 4px; font-weight: bold; cursor: pointer;';
+
+      button.addEventListener('click', () => {
+        if (input.value.trim() === task.answer) alert(`⭕ ${task.title || ''} 正解です！`);
+        else alert(`❌ ${task.title || ''} 不正解です。\n正解は: ${task.answer}`);
+      });
+
+      inputRow.appendChild(input);
+      inputRow.appendChild(button);
+      itemBox.appendChild(inputRow);
+      currentCard.appendChild(itemBox);
     }
-
-    const inputRow = document.createElement('div');
-    inputRow.style.cssText = 'display: flex; gap: 8px;';
-
-    const input = document.createElement('input');
-    input.type = 'text';
-    input.placeholder = '解答';
-    input.style.cssText = 'flex: 1; padding: 8px 12px; border: 1px solid #ccc; border-radius: 4px;';
-
-    const button = document.createElement('button');
-    button.textContent = '判定';
-    button.style.cssText = 'padding: 8px 16px; background-color: #007bff; color: #fff; border: none; border-radius: 4px; font-weight: bold; cursor: pointer;';
-
-    button.addEventListener('click', () => {
-      if (input.value.trim() === task.answer) alert(`⭕ ${task.title || ''} 正解です！`);
-      else alert(`❌ ${task.title || ''} 不正解です。\n正解は: ${task.answer}`);
-    });
-
-    inputRow.appendChild(input);
-    inputRow.appendChild(button);
-    itemBox.appendChild(inputRow);
-    currentCard.appendChild(itemBox);
   });
 }
