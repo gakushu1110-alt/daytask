@@ -19,7 +19,7 @@
     .options-container { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
     .option-btn { padding: 6px 12px; border: 1px solid #007bff; background: #e7f1ff; color: #007bff; border-radius: 6px; cursor: pointer; font-weight: bold; }
     
-    /* ユニフォームカード用スタイル */
+    /* ユニフォームカード */
     .reward-card { border: 2px solid #ffc107; border-radius: 12px; padding: 16px; margin-bottom: 20px; background: linear-gradient(135deg, #fffdf0 0%, #fff9e6 100%); text-align: center; }
     .reward-badge { display: inline-block; padding: 4px 12px; background: #ffc107; color: #000; font-weight: bold; border-radius: 12px; font-size: 12px; margin-bottom: 8px; }
     .jersey-display { font-size: 48px; margin: 8px 0; line-height: 1; }
@@ -39,12 +39,12 @@
     let currentDay = null;
     let currentSubjectFilter = 'すべて';
 
-    // FIFA国マスターデータ定義
+    // FIFA国マスターデータ定義（特殊Unicode制御文字を除去）
     const COUNTRY_MASTER = [
       { week: 1, flag: '🇦🇷', name: 'アルゼンチン代表', numbers: [10, 9, 7, 11, 20, 23] },
       { week: 2, flag: '🇫🇷', name: 'フランス代表', numbers: [10, 7, 9, 11, 8, 16] },
       { week: 3, flag: '🇪🇸', name: 'スペイン代表', numbers: [10, 9, 7, 11, 6, 1] },
-      { week: 4, flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿', name: 'イングランド代表', numbers: [9, 10, 7, 11, 4, 1] },
+      { week: 4, flag: '🇬🇧', name: 'イングランド代表', numbers: [9, 10, 7, 11, 4, 1] },
       { week: 5, flag: '🇧🇷', name: 'ブラジル代表', numbers: [10, 9, 7, 11, 8, 1] }
     ];
 
@@ -179,17 +179,15 @@
       });
     }
 
-    // ユニフォームカード生成関数
     function renderUniformCard(dayNum) {
       const weekIndex = Math.floor((dayNum - 1) / 7);
-      const dayInWeek = ((dayNum - 1) % 7) + 1; // 1〜7
+      const dayInWeek = ((dayNum - 1) % 7) + 1;
       const country = COUNTRY_MASTER[weekIndex] || COUNTRY_MASTER[0];
 
       const card = document.createElement('div');
       card.className = 'reward-card';
 
       if (dayInWeek === 7) {
-        // 7日目：スペシャルアウェーユニフォーム
         card.style.borderColor = '#dc3545';
         card.style.background = 'linear-gradient(135deg, #fff5f5 0%, #ffe3e3 100%)';
         card.innerHTML = `
@@ -199,7 +197,6 @@
           <p class="jersey-desc">1週間完走おめでとう！スペシャル達成アウェーモデルGET！</p>
         `;
       } else {
-        // 1〜6日目：メインユニフォーム（背番号付き）
         const number = country.numbers[dayInWeek - 1] || 10;
         card.innerHTML = `
           <span class="reward-badge">👕 第${weekIndex + 1}週 獲得ユニフォーム</span>
@@ -217,7 +214,6 @@
 
       const dayNum = Number(currentDay) || 1;
 
-      // ★ ユニフォームコレクション（達成ボーナスカード）を表示
       if (currentSubjectFilter === 'すべて' || currentSubjectFilter === '漢字') {
         container.appendChild(renderUniformCard(dayNum));
       }
@@ -295,7 +291,6 @@
           currentImage = hasImage ? imgPath : null;
         }
 
-        // 漢字ノートモード
         if (isKanji) {
           if (task.question) {
             const qTitle = document.createElement('p');
@@ -329,7 +324,6 @@
           return;
         }
 
-        // 通常問題モード
         if (task.title || task.question) {
           const itemBox = document.createElement('div');
           itemBox.style.cssText = 'padding:10px 0; border-top:1px dashed #eee;';
