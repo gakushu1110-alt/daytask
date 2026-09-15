@@ -202,7 +202,6 @@ function renderDay11(container) {
 
     let html = `
       <span class="badge ${item.badgeClass}">${item.subject}</span>
-      <h3>${item.title || '問 ' + (index + 1)}</h3>
       <p style="white-space: pre-wrap;">${item.question}</p>
     `;
 
