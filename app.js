@@ -21,7 +21,7 @@ async function fetchData() {
   }
 }
 
-// CSVパーサー（1行解析）
+// CSVパーサー
 function parseCSVRow(text) {
   const result = [];
   let cell = '';
@@ -39,30 +39,27 @@ function parseCSVRow(text) {
   return result;
 }
 
-// CSV全体を解析
 function parseCSV(text) {
   const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
-  
   return lines.slice(1).map(line => {
     const row = parseCSVRow(line);
     const cleanRow = row.map(val => val.replace(/^"|"$/g, '').trim());
-
     return {
-      day: cleanRow[0] || '',         // A列: day
-      id: cleanRow[1] || '',          // B列: id
-      groupId: cleanRow[2] || '',     // C列: groupId
-      groupImage: cleanRow[3] || '',  // D列: groupImage
-      subject: cleanRow[4] || '',     // E列: subject
-      type: cleanRow[5] || '',        // F列: type
-      title: cleanRow[6] || '',       // G列: title
-      question: cleanRow[7] || '',    // H列: question
-      answer: cleanRow[8] || '',      // I列: answer
-      options: cleanRow[9] || ''      // J列: options
+      day: cleanRow[0] || '',
+      id: cleanRow[1] || '',
+      groupId: cleanRow[2] || '',
+      groupImage: cleanRow[3] || '',
+      subject: cleanRow[4] || '',
+      type: cleanRow[5] || '',
+      title: cleanRow[6] || '',
+      question: cleanRow[7] || '',
+      answer: cleanRow[8] || '',
+      options: cleanRow[9] || ''
     };
   });
 }
 
-// 画像パスの整形関数
+// 画像パス補完処理
 function fixImagePath(path) {
   if (!path || path === '(空欄)') return '';
   let cleanPath = path.trim();
@@ -85,7 +82,15 @@ function renderSubjectButtons(tasks) {
     const btn = document.createElement('button');
     btn.textContent = subject;
     btn.className = 'filter-btn';
-    btn.style.cssText = 'margin-right: 8px; margin-bottom: 12px; padding: 8px 16px; border: 1px solid #007bff; border-radius: 20px; background-color: #fff; color: #007bff; cursor: pointer; font-weight: bold;';
+    btn.style.marginRight = '8px';
+    btn.style.marginBottom = '12px';
+    btn.style.padding = '8px 16px';
+    btn.style.border = '1px solid #007bff';
+    btn.style.borderRadius = '20px';
+    btn.style.backgroundColor = '#fff';
+    btn.style.color = '#007bff';
+    btn.style.cursor = 'pointer';
+    btn.style.fontWeight = 'bold';
 
     btn.addEventListener('click', () => {
       if (subject === 'すべて') renderTasks(allTasks);
@@ -95,7 +100,7 @@ function renderSubjectButtons(tasks) {
   });
 }
 
-// 間違えた問題の保存・取得（LocalStorage）
+// 間違えた漢字問題の記憶処理 (LocalStorage)
 function getWrongKanji() {
   return JSON.parse(localStorage.getItem('wrong_kanji_list') || '[]');
 }
@@ -110,7 +115,7 @@ function toggleWrongKanji(kanjiKey) {
   localStorage.setItem('wrong_kanji_list', JSON.stringify(list));
 }
 
-// メイン描画処理
+// 画面描画メイン
 function renderTasks(tasks) {
   const container = document.getElementById('task-container') || document.body;
   let listArea = document.getElementById('task-list');
@@ -134,17 +139,24 @@ function renderTasks(tasks) {
     // --- 【13日目：漢字復習モード】 ---
     if (isKanji && isReviewDay) {
       const reviewCard = document.createElement('div');
-      reviewCard.style.cssText = 'border: 2px solid #dc3545; border-radius: 12px; padding: 16px; margin-bottom: 20px; background: #fff;';
+      reviewCard.style.border = '2px solid #dc3545';
+      reviewCard.style.borderRadius = '12px';
+      reviewCard.style.padding = '16px';
+      reviewCard.style.marginBottom = '20px';
+      reviewCard.style.backgroundColor = '#fff';
       
       const title = document.createElement('h3');
-      title.style.cssText = 'color: #dc3545; margin-top: 0;';
+      title.style.color = '#dc3545';
+      title.style.marginTop = '0';
       title.textContent = ' 漢字の復習（11日目・12日目のチェック問題）';
       reviewCard.appendChild(title);
 
       if (hasImage) {
         const img = document.createElement('img');
         img.src = imgPath;
-        img.style.cssText = 'max-width: 100%; border-radius: 8px; margin-bottom: 12px;';
+        img.style.maxWidth = '100%';
+        img.style.borderRadius = '8px';
+        img.style.marginBottom = '12px';
         reviewCard.appendChild(img);
       }
 
@@ -155,7 +167,9 @@ function renderTasks(tasks) {
         reviewCard.appendChild(msg);
       } else {
         const listText = document.createElement('p');
-        listText.style.cssText = 'font-size: 16px; font-weight: bold; color: #dc3545;';
+        listText.style.fontSize = '16px';
+        listText.style.fontWeight = 'bold';
+        listText.style.color = '#dc3545';
         listText.textContent = `復習が必要な問題番号: ${wrongList.join(', ')}`;
         reviewCard.appendChild(listText);
       }
@@ -163,28 +177,42 @@ function renderTasks(tasks) {
       return;
     }
 
-    // --- カード枠の作成条件 ---
+    // --- カード枠の新規作成 ---
     const isSubjectChanged = task.subject !== currentSubject;
     const isImageChanged = hasImage && imgPath !== currentImage;
 
     if (!currentCard || isSubjectChanged || isImageChanged || isKanji) {
       currentCard = document.createElement('div');
-      currentCard.style.cssText = 'border: 1px solid #ddd; border-radius: 12px; padding: 16px; margin-bottom: 20px; background-color: #fff;';
+      currentCard.style.border = '1px solid #ddd';
+      currentCard.style.borderRadius = '12px';
+      currentCard.style.padding = '16px';
+      currentCard.style.marginBottom = '20px';
+      currentCard.style.backgroundColor = '#fff';
 
       if (task.subject) {
         const subjectTag = document.createElement('span');
         subjectTag.textContent = `${task.subject} (Day ${task.day})`;
-        subjectTag.style.cssText = `display: inline-block; padding: 4px 12px; border-radius: 4px; background-color: ${isKanji ? '#28a745' : (task.subject === '算数' ? '#007bff' : '#ff8c00')}; color: #fff; font-weight: bold; margin-bottom: 12px;`;
+        subjectTag.style.display = 'inline-block';
+        subjectTag.style.padding = '4px 12px';
+        subjectTag.style.borderRadius = '4px';
+        subjectTag.style.backgroundColor = isKanji ? '#28a745' : (task.subject === '算数' ? '#007bff' : '#ff8c00');
+        subjectTag.style.color = '#fff';
+        subjectTag.style.fontWeight = 'bold';
+        subjectTag.style.marginBottom = '12px';
         currentCard.appendChild(subjectTag);
       }
 
       if (hasImage) {
         const imgContainer = document.createElement('div');
-        imgContainer.style.cssText = 'margin-bottom: 16px; text-align: center;';
+        imgContainer.style.marginBottom = '16px';
+        imgContainer.style.textAlign = 'center';
         const img = document.createElement('img');
         img.src = imgPath;
         img.alt = '問題画像';
-        img.style.cssText = 'max-width: 100%; height: auto; border-radius: 8px; border: 1px solid #eee;';
+        img.style.maxWidth = '100%';
+        img.style.height = 'auto';
+        img.style.borderRadius = '8px';
+        img.style.border = '1px solid #eee';
         imgContainer.appendChild(img);
         currentCard.appendChild(imgContainer);
       }
@@ -194,10 +222,13 @@ function renderTasks(tasks) {
       currentImage = hasImage ? imgPath : null;
     }
 
-    // --- 【11・12日目：漢字（5×4の20問題ボタン）】 ---
+    // --- 【11・12日目：漢字 5×4 20ボタン設定】 ---
     if (isKanji) {
       const gridContainer = document.createElement('div');
-      gridContainer.style.cssText = 'display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-top: 12px;';
+      gridContainer.style.display = 'grid';
+      gridContainer.style.gridTemplateColumns = 'repeat(5, 1fr)';
+      gridContainer.style.gap = '8px';
+      gridContainer.style.marginTop = '12px';
 
       const wrongList = getWrongKanji();
 
@@ -207,14 +238,20 @@ function renderTasks(tasks) {
         btn.textContent = `${i}`;
         
         const isWrong = wrongList.includes(itemKey);
-        btn.style.cssText = `padding: 10px 0; font-weight: bold; border-radius: 6px; border: 1px solid #ccc; cursor: pointer; background-color: ${isWrong ? '#dc3545' : '#f8f9fa'}; color: ${isWrong ? '#fff' : '#333'};`;
+        btn.style.padding = '10px 0';
+        btn.style.fontWeight = 'bold';
+        btn.style.borderRadius = '6px';
+        btn.style.border = '1px solid #ccc';
+        btn.style.cursor = 'pointer';
+        btn.style.backgroundColor = isWrong ? '#dc3545' : '#f8f9fa';
+        btn.style.color = isWrong ? '#ffffff' : '#333333';
 
         btn.addEventListener('click', () => {
           toggleWrongKanji(itemKey);
           const updatedList = getWrongKanji();
           const nowWrong = updatedList.includes(itemKey);
           btn.style.backgroundColor = nowWrong ? '#dc3545' : '#f8f9fa';
-          btn.style.color = nowWrong ? '#fff' : '#333';
+          btn.style.color = nowWrong ? '#ffffff' : '#333333';
         });
 
         gridContainer.appendChild(btn);
@@ -226,24 +263,37 @@ function renderTasks(tasks) {
     // --- 通常問題（算数・社会） ---
     if (task.title || task.question) {
       const itemBox = document.createElement('div');
-      itemBox.style.cssText = 'padding: 10px 0; border-top: 1px dashed #eee;';
+      itemBox.style.padding = '10px 0';
+      itemBox.style.borderTop = '1px dashed #eee';
 
       const qText = document.createElement('div');
-      qText.style.cssText = 'font-weight: bold; margin-bottom: 6px; font-size: 15px;';
+      qText.style.fontWeight = 'bold';
+      qText.style.marginBottom = '6px';
+      qText.style.fontSize = '15px';
       qText.textContent = [task.title, task.question].filter(Boolean).join(' ');
       itemBox.appendChild(qText);
 
       const inputRow = document.createElement('div');
-      inputRow.style.cssText = 'display: flex; gap: 8px;';
+      inputRow.style.display = 'flex';
+      inputRow.style.gap = '8px';
 
       const input = document.createElement('input');
       input.type = 'text';
       input.placeholder = '解答';
-      input.style.cssText = 'flex: 1; padding: 8px 12px; border: 1px solid #ccc; border-radius: 4px;';
+      input.style.flex = '1';
+      input.style.padding = '8px 12px';
+      input.style.border = '1px solid #ccc';
+      input.style.borderRadius = '4px';
 
       const button = document.createElement('button');
       button.textContent = '判定';
-      button.style.cssText = 'padding: 8px 16px; background-color: #007bff; color: #fff; border: none; border-radius: 4px; font-weight: bold; cursor: pointer;';
+      button.style.padding = '8px 16px';
+      button.style.backgroundColor = '#007bff';
+      button.style.color = '#fff';
+      button.style.border = 'none';
+      button.style.borderRadius = '4px';
+      button.style.fontWeight = 'bold';
+      button.style.cursor = 'pointer';
 
       button.addEventListener('click', () => {
         if (input.value.trim() === task.answer) alert(`⭕ ${task.title || ''} 正解です！`);
