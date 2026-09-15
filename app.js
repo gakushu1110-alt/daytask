@@ -32,7 +32,7 @@ document.addEventListener("DOMContentLoaded", () => {
   loadDayData(currentDay);
 });
 
-// CSV1行パース関数
+// CSV1行パース関数（ダブルクォーテーションやカンマの処理）
 function parseCSVLine(line) {
   const result = [];
   let cur = '';
@@ -52,7 +52,7 @@ function parseCSVLine(line) {
   return result.map(v => v.replace(/^"|"$/g, '').replace(/""/g, '"'));
 }
 
-// スプレッドシートからデータ取得
+// スプレッドシートからデータ取得（全9列対応）
 async function loadDayData(day) {
   currentDay = day;
   const container = document.getElementById("main-container");
@@ -75,16 +75,16 @@ async function loadDayData(day) {
         if (!row[0]) continue;
 
         allTasks.push({
-          day: parseInt(row[0]) || 0,
-          id: row[1] || "",
-          groupId: row[2] || "",
-          groupImage: row[3] || "",
-          subject: row[4] || "全般",
+          day: parseInt(row[0]) || 0,                            // A列: day
+          id: row[1] || "",                                      // B列: id
+          groupId: row[2] || "",                                 // C列: groupId
+          groupImage: row[3] || "",                              // D列: groupImage
+          subject: row[4] || "全般",                              // E列: subject
           badgeClass: getBadgeClass(row[4]),
-          type: row[5] || "input",
-          question: row[6] || "",   // G列：問題文
-          answer: row[7] || "",     // H列：正解
-          options: row[8] ? row[8].split(",").map(s => s.trim()) : [], // I列：選択肢
+          type: row[5] || "input",                               // F列: type
+          question: row[6] || "",                                // G列: question (問題文)
+          answer: row[7] || "",                                  // H列: answer (正解)
+          options: row[8] ? row[8].split(",").map(s => s.trim()) : [], // I列: options (選択肢)
           explanation: ""
         });
       }
