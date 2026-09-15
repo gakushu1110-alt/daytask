@@ -21,28 +21,32 @@
   <div id="task-container">データを読み込み中...</div>
 
   <script>
-    // ★ご提示いただいた新しいスプレッドシートURLに更新し、キャッシュ破棄パラメータを追加
     const SPREADSHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS5zB1_bZuI8Vk7FwuyP3OWjgRVGzpP9LZ542955Kqs8adn7ustm6FB_zUNWm9Jo2py9BYGddk1Z_Bz/pub?output=csv';
     let allTasks = [];
 
     const DEFAULT_KANJI_TASK = {
-      day: '11', id: 'kj_11', groupId: '', groupImage: './images/kanji/1.jpg',
+      day: '11', id: 'kj_11', groupId: '', groupImage: 'images/kanji/1.jpg',
       subject: '漢字', type: 'note', title: '', question: 'ノートに書きましょう', answer: '', options: ''
     };
 
-    document.addEventListener('DOMContentLoaded', () => {
-      fetchData();
-    });
+    document.addEventListener('DOMContentLoaded', fetchData);
 
     async function fetchData() {
       try {
-        const cacheBuster = '&_t=' + new Date().getTime();
+        const cacheBuster = (SPREADSHEET_URL.includes('?') ? '&' : '?') + '_t=' + Date.now();
         const response = await fetch(SPREADSHEET_URL + cacheBuster);
-        if (!response.ok) throw new Error('CSV取得エラー');
+        if (!response.ok) throw new Error('HTTPエラー: ' + response.status);
         const data = await response.text();
-        allTasks = parseCSV(data);
         
-        const hasKanji = allTasks.some(t => t.subject === '漢字' || t.type === 'note' || t.id.includes('kj_'));
+        allTasks = parseCSV(data);
+
+        // 漢字タスクが含まれているか判定（subjectが漢字、typeがnote、IDにkjを含む）
+        const hasKanji = allTasks.some(t => 
+          (t.subject && t.subject.includes('漢字')) || 
+          (t.type && t.type.toLowerCase() === 'note') || 
+          (t.id && t.id.toLowerCase().includes('kj'))
+        );
+        
         if (!hasKanji) {
           allTasks.push(DEFAULT_KANJI_TASK);
         }
@@ -50,6 +54,7 @@
         renderSubjectButtons(allTasks);
         renderTasks(allTasks);
       } catch (error) {
+        console.error(error);
         document.getElementById('task-container').innerHTML = '<p style="color:red;">データの読み込みに失敗しました。</p>';
       }
     }
@@ -73,6 +78,8 @@
 
     function parseCSV(text) {
       const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
+      if (lines.length <= 1) return [];
+      
       return lines.slice(1).map(line => {
         const cleanRow = parseCSVRow(line).map(val => val.replace(/^"|"$/g, '').trim());
         return {
@@ -103,9 +110,7 @@
     function normalizeText(str) {
       if (!str) return '';
       return str
-        .replace(/[Ａ-Ｚａ-ｚ０-９]/g, function(s) {
-          return String.fromCharCode(s.charCodeAt(0) - 0xFEE0);
-        })
+        .replace(/[Ａ-Ｚａ-ｚ０-９]/g, s => String.fromCharCode(s.charCodeAt(0) - 0xFEE0))
         .replace(/\s+/g, '')
         .trim();
     }
@@ -127,6 +132,7 @@
     function renderSubjectButtons(tasks) {
       const buttonContainer = document.getElementById('button-container');
       buttonContainer.innerHTML = '';
+      
       const subjects = ['すべて', ...new Set(tasks.map(t => t.subject).filter(Boolean))];
 
       subjects.forEach(subject => {
@@ -145,24 +151,33 @@
       const container = document.getElementById('task-container');
       container.innerHTML = '';
 
+      if (tasks.length === 0) {
+        container.innerHTML = '<p>表示する問題がありません。</p>';
+        return;
+      }
+
       let currentSubject = null;
       let currentImage = null;
       let currentCard = null;
 
       tasks.forEach((task) => {
-        const isKanji = task.subject === '漢字' || task.type === 'note' || task.id.includes('kj_');
-        const isReviewDay = String(task.day) === '13';
+        // ★ 漢字の判定ロジックを強化
+        const isKanji = (task.subject && task.subject.includes('漢字')) || 
+                        (task.type && task.type.toLowerCase() === 'note') || 
+                        (task.id && task.id.toLowerCase().includes('kj'));
+                        
+        const isReviewDay = String(task.day) === '13' && isKanji;
         const imgPath = fixImagePath(task.groupImage);
         const hasImage = imgPath !== '';
 
-        if (isKanji && isReviewDay) {
+        if (isReviewDay) {
           const reviewCard = document.createElement('div');
           reviewCard.className = 'task-card';
           reviewCard.style.borderColor = '#dc3545';
           
           const wrongList = getWrongKanji();
           reviewCard.innerHTML = `
-            <h3 style="color:#dc3545;margin-top:0;"> 漢字の復習 (Day 13)</h3>
+            <h3 style="color:#dc3545;margin-top:0;">📝 漢字の復習 (Day 13)</h3>
             ${hasImage ? `<div style="text-align:center;margin-bottom:12px;"><img src="${imgPath}" style="max-width:100%;border-radius:8px;"></div>` : ''}
             <p style="font-weight:bold;color:#dc3545;">
               ${wrongList.length === 0 ? '🎉 復習する問題はありません！' : '復習が必要な問題番号: ' + wrongList.join(', ')}
@@ -180,7 +195,12 @@
           currentCard.className = 'task-card';
 
           if (task.subject) {
-            const tagColor = isKanji ? '#28a745' : (task.subject === '算数' ? '#007bff' : (task.subject === '理科' ? '#17a2b8' : '#ff8c00'));
+            let tagColor = '#6c757d';
+            if (isKanji) tagColor = '#28a745';
+            else if (task.subject === '算数') tagColor = '#007bff';
+            else if (task.subject === '理科') tagColor = '#17a2b8';
+            else if (task.subject === '社会') tagColor = '#ff8c00';
+
             const subjectTag = document.createElement('div');
             subjectTag.innerHTML = `<span class="subject-tag" style="background-color:${tagColor}">${task.subject} (Day ${task.day})</span>`;
             currentCard.appendChild(subjectTag);
@@ -198,6 +218,7 @@
           currentImage = hasImage ? imgPath : null;
         }
 
+        // 漢字モード（1〜20のグリッドを表示）
         if (isKanji) {
           if (task.question) {
             const qTitle = document.createElement('p');
@@ -231,6 +252,7 @@
           return;
         }
 
+        // 通常問題モード
         if (task.title || task.question) {
           const itemBox = document.createElement('div');
           itemBox.style.cssText = 'padding:10px 0; border-top:1px dashed #eee;';
