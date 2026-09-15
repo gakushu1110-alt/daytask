@@ -154,10 +154,12 @@
         .trim();
     }
 
+    // 間違えた問題番号を取得
     function getWrongKanji() {
       return JSON.parse(localStorage.getItem('wrong_kanji_list') || '[]');
     }
 
+    // 間違えた問題番号のオン/オフ切り替え
     function toggleWrongKanji(kanjiKey) {
       let list = getWrongKanji();
       if (list.includes(kanjiKey)) {
@@ -229,7 +231,7 @@
       });
     }
 
-    // ★ 達成報酬カード生成
+    // 達成報酬カード生成
     function renderRewardCard(dayNum) {
       const weekNum = Math.floor((dayNum - 1) / 7) + 1; 
       const dayInWeek = ((dayNum - 1) % 7) + 1;        
@@ -277,7 +279,7 @@
       return card;
     }
 
-    // ★ 図鑑（コレクション）ポップアップを開く処理
+    // 図鑑（コレクション）ポップアップを開く処理
     function openCollectionModal() {
       const modal = document.getElementById('collection-modal');
       const listContainer = document.getElementById('collection-list');
@@ -354,22 +356,25 @@
         const isKanji = (task.subject && task.subject.includes('漢字')) || 
                         (task.type && task.type.toLowerCase() === 'note') || 
                         (task.id && task.id.toLowerCase().includes('kj'));
-                        
-        const isReviewDay = String(task.day) === '13' && isKanji;
+
         const imgPath = fixImagePath(task.groupImage);
         const hasImage = imgPath !== '';
 
-        if (isReviewDay) {
+        // ★ Day 13 の漢字復習処理
+        if (String(task.day) === '13' && isKanji) {
           const reviewCard = document.createElement('div');
           reviewCard.className = 'task-card';
           reviewCard.style.borderColor = '#dc3545';
           
           const wrongList = getWrongKanji();
+          const displayList = wrongList.map(item => item.replace('NO-', 'No.'));
+
           reviewCard.innerHTML = `
             <h3 style="color:#dc3545;margin-top:0;">📝 漢字の復習 (Day 13)</h3>
             ${hasImage ? `<div style="text-align:center;margin-bottom:12px;"><img src="${imgPath}" style="max-width:100%;border-radius:8px;"></div>` : ''}
-            <p style="font-weight:bold;color:#dc3545;">
-              ${wrongList.length === 0 ? '🎉 復習する問題はありません！' : '復習が必要な問題番号: ' + wrongList.join(', ')}
+            <p style="font-weight:bold;color:#333;margin-bottom:8px;">【11日目・12日目で間違えた番号】</p>
+            <p style="font-weight:bold;color:#dc3545;font-size:16px;background:#fff5f5;padding:12px;border-radius:8px;border:1px solid #ffcdd2;">
+              ${displayList.length === 0 ? '🎉 間違えた問題はありません！バッチリです！' : displayList.join(' ,  ')}
             </p>
           `;
           container.appendChild(reviewCard);
@@ -407,6 +412,7 @@
           currentImage = hasImage ? imgPath : null;
         }
 
+        // ★ 漢字の処理（Day 11, Day 12 のみボタンを表示）
         if (isKanji) {
           if (task.question) {
             const qTitle = document.createElement('p');
@@ -415,31 +421,38 @@
             currentCard.appendChild(qTitle);
           }
 
-          const grid = document.createElement('div');
-          grid.className = 'grid-container';
-          const wrongList = getWrongKanji();
+          // Day 11 は 1〜20番、Day 12 は 21〜40番 のボタンを表示
+          if (String(task.day) === '11' || String(task.day) === '12') {
+            const grid = document.createElement('div');
+            grid.className = 'grid-container';
+            const wrongList = getWrongKanji();
 
-          for (let i = 1; i <= 20; i++) {
-            const itemKey = `Day${task.day}-${i}`;
-            const isWrong = wrongList.includes(itemKey);
-            const btn = document.createElement('button');
-            btn.className = 'grid-btn';
-            btn.textContent = i;
-            btn.style.backgroundColor = isWrong ? '#dc3545' : '#f8f9fa';
-            btn.style.color = isWrong ? '#ffffff' : '#333333';
+            const startNum = String(task.day) === '11' ? 1 : 21;
+            const endNum = String(task.day) === '11' ? 20 : 40;
 
-            btn.onclick = () => {
-              toggleWrongKanji(itemKey);
-              const nowWrong = getWrongKanji().includes(itemKey);
-              btn.style.backgroundColor = nowWrong ? '#dc3545' : '#f8f9fa';
-              btn.style.color = nowWrong ? '#ffffff' : '#333333';
-            };
-            grid.appendChild(btn);
+            for (let i = startNum; i <= endNum; i++) {
+              const itemKey = `NO-${i}`;
+              const isWrong = wrongList.includes(itemKey);
+              const btn = document.createElement('button');
+              btn.className = 'grid-btn';
+              btn.textContent = i;
+              btn.style.backgroundColor = isWrong ? '#dc3545' : '#f8f9fa';
+              btn.style.color = isWrong ? '#ffffff' : '#333333';
+
+              btn.onclick = () => {
+                toggleWrongKanji(itemKey);
+                const nowWrong = getWrongKanji().includes(itemKey);
+                btn.style.backgroundColor = nowWrong ? '#dc3545' : '#f8f9fa';
+                btn.style.color = nowWrong ? '#ffffff' : '#333333';
+              };
+              grid.appendChild(btn);
+            }
+            currentCard.appendChild(grid);
           }
-          currentCard.appendChild(grid);
           return;
         }
 
+        // 通常問題（テキスト問題）の処理
         if (task.title || task.question) {
           const itemBox = document.createElement('div');
           itemBox.style.cssText = 'padding:10px 0; border-top:1px dashed #eee;';
