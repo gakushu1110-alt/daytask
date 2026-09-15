@@ -39,6 +39,7 @@
       }
     }
 
+    // CSVパーサー（1行解析）
     function parseCSVRow(text) {
       const result = [];
       let cell = '';
@@ -59,19 +60,18 @@
     function parseCSV(text) {
       const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
       return lines.slice(1).map(line => {
-        const row = parseCSVRow(line);
-        const cleanRow = row.map(val => val.replace(/^"|"$/g, '').trim());
+        const cleanRow = parseCSVRow(line).map(val => val.replace(/^"|"$/g, '').trim());
         return {
-          day: cleanRow[0] || '',
-          id: cleanRow[1] || '',
-          groupId: cleanRow[2] || '',
-          groupImage: cleanRow[3] || '',
-          subject: cleanRow[4] || '',
-          type: cleanRow[5] || '',
-          title: cleanRow[6] || '',
-          question: cleanRow[7] || '',
-          answer: cleanRow[8] || '',
-          options: cleanRow[9] || ''
+          day: cleanRow[0] || '',        // A
+          id: cleanRow[1] || '',         // B
+          groupId: cleanRow[2] || '',    // C
+          groupImage: cleanRow[3] || '', // D
+          subject: cleanRow[4] || '',    // E
+          type: cleanRow[5] || '',       // F
+          title: cleanRow[6] || '',      // G
+          question: cleanRow[7] || '',   // H
+          answer: cleanRow[8] || '',     // I
+          options: cleanRow[9] || ''     // J
         };
       });
     }
@@ -126,12 +126,13 @@
       let currentCard = null;
 
       tasks.forEach((task) => {
+        // E列が漢字、またはF列がnoteの場合を判定
         const isKanji = task.subject === '漢字' || task.type === 'note';
         const isReviewDay = String(task.day) === '13';
         const imgPath = fixImagePath(task.groupImage);
         const hasImage = imgPath !== '';
 
-        // 13日目 復習
+        // --- 13日目 復習モード ---
         if (isKanji && isReviewDay) {
           const reviewCard = document.createElement('div');
           reviewCard.className = 'task-card';
@@ -140,7 +141,7 @@
           const wrongList = getWrongKanji();
           reviewCard.innerHTML = `
             <h3 style="color:#dc3545;margin-top:0;"> 漢字の復習 (Day 13)</h3>
-            ${hasImage ? `<img src="${imgPath}" style="max-width:100%;border-radius:8px;margin-bottom:12px;">` : ''}
+            ${hasImage ? `<div style="text-align:center;margin-bottom:12px;"><img src="${imgPath}" style="max-width:100%;border-radius:8px;"></div>` : ''}
             <p style="font-weight:bold;color:#dc3545;">
               ${wrongList.length === 0 ? '🎉 復習する問題はありません！' : '復習が必要な問題番号: ' + wrongList.join(', ')}
             </p>
@@ -152,17 +153,23 @@
         const isSubjectChanged = task.subject !== currentSubject;
         const isImageChanged = hasImage && imgPath !== currentImage;
 
+        // カード枠の生成
         if (!currentCard || isSubjectChanged || isImageChanged || isKanji) {
           currentCard = document.createElement('div');
           currentCard.className = 'task-card';
 
           if (task.subject) {
             const tagColor = isKanji ? '#28a745' : (task.subject === '算数' ? '#007bff' : '#ff8c00');
-            currentCard.innerHTML += `<span class="subject-tag" style="background-color:${tagColor}">${task.subject} (Day ${task.day})</span>`;
+            const subjectTag = document.createElement('div');
+            subjectTag.innerHTML = `<span class="subject-tag" style="background-color:${tagColor}">${task.subject} (Day ${task.day})</span>`;
+            currentCard.appendChild(subjectTag);
           }
 
           if (hasImage) {
-            currentCard.innerHTML += `<div style="text-align:center;margin-bottom:16px;"><img src="${imgPath}" style="max-width:100%;border-radius:8px;border:1px solid #eee;"></div>`;
+            const imgBox = document.createElement('div');
+            imgBox.style.cssText = 'text-align:center;margin-bottom:16px;';
+            imgBox.innerHTML = `<img src="${imgPath}" style="max-width:100%;border-radius:8px;border:1px solid #eee;">`;
+            currentCard.appendChild(imgBox);
           }
 
           container.appendChild(currentCard);
@@ -170,8 +177,15 @@
           currentImage = hasImage ? imgPath : null;
         }
 
-        // 漢字 20ボタン
+        // --- 【11・12日目 漢字：5×4の20個ボタン描画】 ---
         if (isKanji) {
+          if (task.question) {
+            const qTitle = document.createElement('p');
+            qTitle.style.cssText = 'font-weight:bold;margin:0 0 8px 0;';
+            qTitle.textContent = task.question;
+            currentCard.appendChild(qTitle);
+          }
+
           const grid = document.createElement('div');
           grid.className = 'grid-container';
           const wrongList = getWrongKanji();
@@ -197,7 +211,7 @@
           return;
         }
 
-        // 算数・社会
+        // --- 算数・社会の表示 ---
         if (task.title || task.question) {
           const itemBox = document.createElement('div');
           itemBox.style.cssText = 'padding:10px 0; border-top:1px dashed #eee;';
