@@ -6,28 +6,40 @@
   <title>day-task-app</title>
   <style>
     body { font-family: sans-serif; padding: 16px; background: #f5f5f5; max-width: 600px; margin: 0 auto; }
-    .filter-btn { margin-right: 8px; margin-bottom: 12px; padding: 8px 16px; border: 1px solid #007bff; border-radius: 20px; background: #fff; color: #007bff; font-weight: bold; cursor: pointer; }
-    .task-card { border: 1px solid #ddd; border-radius: 12px; padding: 16px; margin-bottom: 20px; background: #fff; }
+    .nav-container { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 12px; }
+    .day-btn { padding: 8px 16px; border: 1px solid #007bff; border-radius: 20px; background: #fff; color: #007bff; font-weight: bold; cursor: pointer; white-space: nowrap; }
+    .day-btn.active { background: #007bff; color: #fff; }
+    .filter-container { margin-bottom: 16px; }
+    .filter-btn { margin-right: 6px; padding: 6px 12px; border: 1px solid #6c757d; border-radius: 16px; background: #fff; color: #6c757d; font-weight: bold; cursor: pointer; }
+    .filter-btn.active { background: #6c757d; color: #fff; }
+    .task-card { border: 1px solid #ddd; border-radius: 12px; padding: 16px; margin-bottom: 20px; background: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
     .subject-tag { display: inline-block; padding: 4px 12px; border-radius: 4px; color: #fff; font-weight: bold; margin-bottom: 12px; }
     .grid-container { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-top: 12px; }
     .grid-btn { padding: 10px 0; font-weight: bold; border-radius: 6px; border: 1px solid #ccc; cursor: pointer; }
     .options-container { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
     .option-btn { padding: 6px 12px; border: 1px solid #007bff; background: #e7f1ff; color: #007bff; border-radius: 6px; cursor: pointer; font-weight: bold; }
+    .uniform-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; text-align: center; margin-top: 10px; }
+    .uniform-item { border: 1px solid #ffc107; border-radius: 8px; padding: 8px; background: #fff9e6; font-size: 24px; }
   </style>
 </head>
 <body>
 
-  <div id="button-container"></div>
+  <!-- Day選択ナビゲーション -->
+  <div id="day-container" class="nav-container"></div>
+  
+  <!-- 教科フィルター -->
+  <div id="button-container" class="filter-container"></div>
+  
+  <!-- タスク表示エリア -->
   <div id="task-container">データを読み込み中...</div>
 
   <script>
     const SPREADSHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS5zB1_bZuI8Vk7FwuyP3OWjgRVGzpP9LZ542955Kqs8adn7ustm6FB_zUNWm9Jo2py9BYGddk1Z_Bz/pub?output=csv';
     let allTasks = [];
+    let currentDay = null;
+    let currentSubjectFilter = 'すべて';
 
-    const DEFAULT_KANJI_TASK = {
-      day: '11', id: 'kj_11', groupId: '', groupImage: 'images/kanji/1.jpg',
-      subject: '漢字', type: 'note', title: '', question: 'ノートに書きましょう', answer: '', options: ''
-    };
+    const UNIFORMS = ['⚽', '⚾', '🏀', '🏐', '🏈', '🎾', '🏓', '🥊', '🥋', '🚴'];
 
     document.addEventListener('DOMContentLoaded', fetchData);
 
@@ -39,20 +51,15 @@
         const data = await response.text();
         
         allTasks = parseCSV(data);
-
-        // 漢字タスクが含まれているか判定（subjectが漢字、typeがnote、IDにkjを含む）
-        const hasKanji = allTasks.some(t => 
-          (t.subject && t.subject.includes('漢字')) || 
-          (t.type && t.type.toLowerCase() === 'note') || 
-          (t.id && t.id.toLowerCase().includes('kj'))
-        );
         
-        if (!hasKanji) {
-          allTasks.push(DEFAULT_KANJI_TASK);
+        // 全Dayを取得してソート（11, 12, 13...）
+        const days = [...new Set(allTasks.map(t => String(t.day)).filter(Boolean))].sort((a,b) => Number(a) - Number(b));
+        if (days.length > 0) {
+          currentDay = days[0];
         }
 
-        renderSubjectButtons(allTasks);
-        renderTasks(allTasks);
+        renderDayButtons(days);
+        renderTasks();
       } catch (error) {
         console.error(error);
         document.getElementById('task-container').innerHTML = '<p style="color:red;">データの読み込みに失敗しました。</p>';
@@ -129,30 +136,81 @@
       localStorage.setItem('wrong_kanji_list', JSON.stringify(list));
     }
 
-    function renderSubjectButtons(tasks) {
+    // Dayボタン描画
+    function renderDayButtons(days) {
+      const dayContainer = document.getElementById('day-container');
+      dayContainer.innerHTML = '';
+
+      days.forEach(day => {
+        const btn = document.createElement('button');
+        btn.textContent = `Day ${day}`;
+        btn.className = `day-btn ${String(day) === String(currentDay) ? 'active' : ''}`;
+        btn.onclick = () => {
+          currentDay = String(day);
+          currentSubjectFilter = 'すべて';
+          renderDayButtons(days);
+          renderTasks();
+        };
+        dayContainer.appendChild(btn);
+      });
+    }
+
+    // 教科フィルター描画
+    function renderSubjectButtons(dayTasks) {
       const buttonContainer = document.getElementById('button-container');
       buttonContainer.innerHTML = '';
       
-      const subjects = ['すべて', ...new Set(tasks.map(t => t.subject).filter(Boolean))];
+      const subjects = ['すべて', ...new Set(dayTasks.map(t => t.subject).filter(Boolean))];
 
       subjects.forEach(subject => {
         const btn = document.createElement('button');
         btn.textContent = subject;
-        btn.className = 'filter-btn';
+        btn.className = `filter-btn ${subject === currentSubjectFilter ? 'active' : ''}`;
         btn.onclick = () => {
-          if (subject === 'すべて') renderTasks(allTasks);
-          else renderTasks(allTasks.filter(t => t.subject === subject));
+          currentSubjectFilter = subject;
+          renderSubjectButtons(dayTasks);
+          renderTasks();
         };
         buttonContainer.appendChild(btn);
       });
     }
 
-    function renderTasks(tasks) {
+    // タスク描画メイン
+    function renderTasks() {
       const container = document.getElementById('task-container');
       container.innerHTML = '';
 
-      if (tasks.length === 0) {
-        container.innerHTML = '<p>表示する問題がありません。</p>';
+      // 指定されたDayのデータのみ抽出
+      const dayTasks = allTasks.filter(t => String(t.day) === String(currentDay));
+      renderSubjectButtons(dayTasks);
+
+      // 教科フィルター適用
+      const tasksToDisplay = currentSubjectFilter === 'すべて' 
+        ? dayTasks 
+        : dayTasks.filter(t => t.subject === currentSubjectFilter);
+
+      // ★ 7日ごと（Day 7, 14, 21...）のごほうび：ユニフォームコレクション表示
+      if (Number(currentDay) % 7 === 0 && (currentSubjectFilter === 'すべて' || currentSubjectFilter === '漢字')) {
+        const rewardCard = document.createElement('div');
+        rewardCard.className = 'task-card';
+        rewardCard.style.borderColor = '#ffc107';
+        rewardCard.style.backgroundColor = '#fffdf0';
+        
+        let rewardHtml = `
+          <h3 style="color:#d39e00;margin-top:0;">🎉 7日間達成ごほうび！ユニフォームコレクション</h3>
+          <p style="font-size:14px;color:#666;">7日間の学習達成おめでとう！ゲットしたユニフォームコレクションです。</p>
+          <div class="uniform-grid">
+        `;
+        UNIFORMS.forEach((u, idx) => {
+          rewardHtml += `<div class="uniform-item" title="No.${idx+1}">${u}</div>`;
+        });
+        rewardHtml += `</div>`;
+        rewardCard.innerHTML = rewardHtml;
+        container.appendChild(rewardCard);
+      }
+
+      if (tasksToDisplay.length === 0) {
+        container.innerHTML += '<p>この日の該当する問題はありません。</p>';
         return;
       }
 
@@ -160,8 +218,7 @@
       let currentImage = null;
       let currentCard = null;
 
-      tasks.forEach((task) => {
-        // ★ 漢字の判定ロジックを強化
+      tasksToDisplay.forEach((task) => {
         const isKanji = (task.subject && task.subject.includes('漢字')) || 
                         (task.type && task.type.toLowerCase() === 'note') || 
                         (task.id && task.id.toLowerCase().includes('kj'));
@@ -218,7 +275,7 @@
           currentImage = hasImage ? imgPath : null;
         }
 
-        // 漢字モード（1〜20のグリッドを表示）
+        // 漢字ノートモード（1〜20のグリッド表示）
         if (isKanji) {
           if (task.question) {
             const qTitle = document.createElement('p');
