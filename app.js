@@ -14,6 +14,8 @@ async function fetchData() {
     const data = await response.text();
     allTasks = parseCSV(data);
     
+    console.log('取得した全タスク:', allTasks);
+
     renderSubjectButtons(allTasks);
     renderTasks(allTasks);
   } catch (error) {
@@ -59,7 +61,7 @@ function parseCSV(text) {
   });
 }
 
-// 画像パスの整形関数（パスズレを自動防止）
+// 画像パスの整形関数
 function fixImagePath(path) {
   if (!path || path === '(空欄)') return '';
   let cleanPath = path.trim();
@@ -118,12 +120,17 @@ function renderTasks(tasks) {
   }
   listArea.innerHTML = '';
 
+  if (!tasks || tasks.length === 0) {
+    listArea.innerHTML = '<p>表示できるデータがありません。</p>';
+    return;
+  }
+
   let currentSubject = null;
   let currentImage = null;
   let currentCard = null;
 
   tasks.forEach((task) => {
-    const isKanji = task.subject === '漢字';
+    const isKanji = task.subject === '漢字' || task.type === 'kanji';
     const isReviewDay = String(task.day) === '13';
     const imgPath = fixImagePath(task.groupImage);
     const hasImage = imgPath !== '';
@@ -160,7 +167,7 @@ function renderTasks(tasks) {
       return;
     }
 
-    // --- カード枠の作成条件 ---
+    // --- 新しいカードの作成 ---
     const isSubjectChanged = task.subject !== currentSubject;
     const isImageChanged = hasImage && imgPath !== currentImage;
 
@@ -171,7 +178,7 @@ function renderTasks(tasks) {
       if (task.subject) {
         const subjectTag = document.createElement('span');
         subjectTag.textContent = `${task.subject} (Day ${task.day})`;
-        subjectTag.style.cssText = `display: inline-block; padding: 4px 12px; border-radius: 4px; background-color: ${task.subject === '漢字' ? '#28a745' : (task.subject === '算数' ? '#007bff' : '#ff8c00')}; color: #fff; font-weight: bold; margin-bottom: 12px;`;
+        subjectTag.style.cssText = `display: inline-block; padding: 4px 12px; border-radius: 4px; background-color: ${isKanji ? '#28a745' : (task.subject === '算数' ? '#007bff' : '#ff8c00')}; color: #fff; font-weight: bold; margin-bottom: 12px;`;
         currentCard.appendChild(subjectTag);
       }
 
@@ -180,6 +187,7 @@ function renderTasks(tasks) {
         imgContainer.style.cssText = 'margin-bottom: 16px; text-align: center;';
         const img = document.createElement('img');
         img.src = imgPath;
+        img.alt = '問題画像';
         img.style.cssText = 'max-width: 100%; height: auto; border-radius: 8px; border: 1px solid #eee;';
         imgContainer.appendChild(img);
         currentCard.appendChild(imgContainer);
