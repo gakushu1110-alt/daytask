@@ -76,7 +76,7 @@ function parseCSV(text) {
   });
 }
 
-// 教科切り替えボタンを生成する関数
+// 教科切り替えボタンを動的に生成する関数
 function renderSubjectButtons(tasks) {
   const buttonContainer = document.getElementById('button-container') || document.getElementById('filter-buttons');
   if (!buttonContainer) return;
@@ -91,7 +91,7 @@ function renderSubjectButtons(tasks) {
     btn.textContent = subject;
     btn.className = 'filter-btn';
     btn.style.marginRight = '8px';
-    btn.style.marginBottom = '12px';
+    btn.style.marginBottom = '8px';
     btn.style.padding = '8px 16px';
     btn.style.border = '1px solid #007bff';
     btn.style.borderRadius = '20px';
@@ -113,10 +113,11 @@ function renderSubjectButtons(tasks) {
   });
 }
 
-// 画面にタスクを描画する処理（1枚の画像で複数問を表示するグループ化対応）
+// 画面にタスクを描画する処理
 function renderTasks(tasks) {
   const container = document.getElementById('task-container') || document.body;
   
+  // ボタンエリアを消さないように、カード表示用の要素を用意
   let listArea = document.getElementById('task-list');
   if (!listArea) {
     listArea = document.createElement('div');
@@ -125,90 +126,81 @@ function renderTasks(tasks) {
   }
   listArea.innerHTML = '';
 
-  let currentImage = null;
-  let currentCard = null;
+  tasks.forEach(task => {
+    const card = document.createElement('div');
+    card.className = 'task-card';
+    card.style.border = '1px solid #ddd';
+    card.style.borderRadius = '8px';
+    card.style.padding = '16px';
+    card.style.marginBottom = '16px';
+    card.style.backgroundColor = '#fff';
 
-  tasks.forEach((task) => {
-    const hasImage = task.groupImage && task.groupImage !== '(空欄)' && task.groupImage.trim() !== '';
-
-    // 新しい画像グループが始まった場合、または画像がない単体の問題の場合にカード枠を新規作成
-    if (!currentCard || (hasImage && task.groupImage !== currentImage) || (!hasImage && currentImage !== null)) {
-      currentCard = document.createElement('div');
-      currentCard.className = 'task-card';
-      currentCard.style.border = '1px solid #ddd';
-      currentCard.style.borderRadius = '12px';
-      currentCard.style.padding = '16px';
-      currentCard.style.marginBottom = '20px';
-      currentCard.style.backgroundColor = '#fff';
-
-      // 教科タグ
-      if (task.subject) {
-        const subjectTag = document.createElement('span');
-        subjectTag.className = `subject-tag ${task.subject}`;
-        subjectTag.textContent = task.subject;
-        subjectTag.style.display = 'inline-block';
-        subjectTag.style.padding = '4px 12px';
-        subjectTag.style.borderRadius = '4px';
-        subjectTag.style.backgroundColor = task.subject === '算数' ? '#007bff' : (task.subject === '漢字' ? '#28a745' : '#ff8c00');
-        subjectTag.style.color = '#fff';
-        subjectTag.style.fontWeight = 'bold';
-        subjectTag.style.marginBottom = '12px';
-        currentCard.appendChild(subjectTag);
-      }
-
-      // 20問共通の画像をカードの最上部に1枚だけ表示
-      if (hasImage) {
-        const imgContainer = document.createElement('div');
-        imgContainer.style.marginBottom = '16px';
-        imgContainer.style.textAlign = 'center';
-
-        const img = document.createElement('img');
-        img.src = task.groupImage;
-        img.alt = '問題一覧画像';
-        img.style.maxWidth = '100%';
-        img.style.height = 'auto';
-        img.style.borderRadius = '8px';
-        img.style.border = '1px solid #eee';
-
-        imgContainer.appendChild(img);
-        currentCard.appendChild(imgContainer);
-      }
-
-      listArea.appendChild(currentCard);
-      currentImage = hasImage ? task.groupImage : null;
+    // 教科タグ
+    if (task.subject) {
+      const subjectTag = document.createElement('span');
+      subjectTag.className = `subject-tag ${task.subject}`;
+      subjectTag.textContent = task.subject;
+      subjectTag.style.display = 'inline-block';
+      subjectTag.style.padding = '4px 10px';
+      subjectTag.style.borderRadius = '4px';
+      subjectTag.style.backgroundColor = task.subject === '算数' ? '#007bff' : '#ff8c00';
+      subjectTag.style.color = '#fff';
+      subjectTag.style.fontWeight = 'bold';
+      subjectTag.style.marginBottom = '12px';
+      card.appendChild(subjectTag);
     }
 
-    // 各問題の回答用ブロックを作成
-    const itemBox = document.createElement('div');
-    itemBox.style.padding = '10px 0';
-    itemBox.style.borderTop = '1px dashed #eee';
-
-    // タイトル（例: 問1）や問題文があれば表示
-    if (task.title || task.question) {
-      const qText = document.createElement('div');
-      qText.style.fontWeight = 'bold';
-      qText.style.marginBottom = '6px';
-      qText.style.fontSize = '15px';
-      qText.textContent = [task.title, task.question].filter(Boolean).join(' ');
-      itemBox.appendChild(qText);
+    // 画像表示
+    if (task.groupImage && task.groupImage !== '(空欄)' && task.groupImage.trim() !== '') {
+      const imgContainer = document.createElement('div');
+      imgContainer.style.marginBottom = '12px';
+      
+      const img = document.createElement('img');
+      img.src = task.groupImage;
+      img.alt = '問題画像';
+      img.style.maxWidth = '100%';
+      img.style.height = 'auto';
+      img.style.borderRadius = '4px';
+      
+      imgContainer.appendChild(img);
+      card.appendChild(imgContainer);
     }
 
-    // 入力フォームとボタン
-    const inputRow = document.createElement('div');
-    inputRow.style.display = 'flex';
-    inputRow.style.gap = '8px';
+    // タイトル（問1 など）
+    if (task.title) {
+      const titleEl = document.createElement('h3');
+      titleEl.textContent = task.title;
+      titleEl.style.margin = '4px 0 8px 0';
+      card.appendChild(titleEl);
+    }
 
+    // 問題文
+    if (task.question) {
+      const questionEl = document.createElement('p');
+      questionEl.textContent = task.question;
+      questionEl.style.fontSize = '16px';
+      questionEl.style.lineHeight = '1.6';
+      questionEl.style.margin = '0 0 12px 0';
+      card.appendChild(questionEl);
+    }
+
+    // 解答入力フォーム
+    const inputContainer = document.createElement('div');
+    
     const input = document.createElement('input');
     input.type = 'text';
-    input.placeholder = '解答';
-    input.style.flex = '1';
+    input.placeholder = '解答を入力';
+    input.style.width = '100%';
     input.style.padding = '8px 12px';
+    input.style.boxSizing = 'border-box';
+    input.style.marginBottom = '8px';
     input.style.border = '1px solid #ccc';
     input.style.borderRadius = '4px';
 
     const button = document.createElement('button');
-    button.textContent = '判定';
-    button.style.padding = '8px 16px';
+    button.textContent = '回答する';
+    button.style.width = '100%';
+    button.style.padding = '10px';
     button.style.backgroundColor = '#007bff';
     button.style.color = '#fff';
     button.style.border = 'none';
@@ -219,16 +211,16 @@ function renderTasks(tasks) {
     button.addEventListener('click', () => {
       const userAnswer = input.value.trim();
       if (userAnswer === task.answer) {
-        alert(`⭕ ${task.title || ''} 正解です！`);
+        alert('⭕ 正解です！');
       } else {
-        alert(`❌ ${task.title || ''} 不正解です。\n正解は: ${task.answer}`);
+        alert(`❌ 不正解です。\n正解は: ${task.answer}`);
       }
     });
 
-    inputRow.appendChild(input);
-    inputRow.appendChild(button);
-    itemBox.appendChild(inputRow);
+    inputContainer.appendChild(input);
+    inputContainer.appendChild(button);
+    card.appendChild(inputContainer);
 
-    currentCard.appendChild(itemBox);
+    listArea.appendChild(card);
   });
 }
