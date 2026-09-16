@@ -184,14 +184,14 @@
             cursor: not-allowed;
         }
 
-        /* 漢字ボタン選択スタイル */
+        /* 漢字評価ボタン */
         .eval-btn-group {
             display: flex;
             gap: 10px;
             margin-top: 8px;
         }
         .eval-btn {
-            padding: 6px 16px;
+            padding: 8px 16px;
             border-radius: 6px;
             border: 1px solid #cbd5e1;
             background: white;
@@ -254,7 +254,7 @@
 <body>
 
 <div class="container">
-    <h1>⚽ まいにち学習＆カードコレクション</h1>
+    <h1>⚽ まいにち学習＆ワールドカードコレクション</h1>
     <div class="subtitle">算数・理科・社会・漢字をクリアして、レアカードを獲得しよう！</div>
 
     <!-- メインタブ（きょうの課題／カード図鑑） -->
@@ -273,7 +273,7 @@
                 <button class="sub-btn" onclick="openPastModal()">📁 ほかの日をえらぶ</button>
             </div>
 
-            <!-- 科目切替ボタン（漢字・算数・理科・社会） -->
+            <!-- 科目切替ボタン -->
             <div class="subject-menu">
                 <button class="subject-btn active" onclick="switchSubject('kanji')">✍️ 漢字</button>
                 <button class="subject-btn" onclick="switchSubject('calc')">🔢 算数</button>
@@ -287,10 +287,21 @@
                     <div style="font-weight: bold; font-size: 1.05rem; margin-bottom: 4px;">✍️ 漢字（ノート手書き練習）</div>
                     <div id="kanji-instruction" style="color: #1e40af; margin-bottom: 12px; font-weight: bold;"></div>
                     
+                    <!-- 13日目の全体復習時のリマインドメモ表示領域 -->
+                    <div id="kanji-review-memo" style="display:none; background:#fef3c7; border:1px solid #f59e0b; padding:10px; border-radius:6px; margin-bottom:12px; font-size:0.9rem; color:#b45309;">
+                        <strong>🔍 11・12日目の復習メモ：</strong><br>
+                        <span id="kanji-review-text">なし</span>
+                    </div>
+
                     <div style="font-size:0.9rem; color:#475569; margin-bottom:6px;">今日の漢字学習の結果：</div>
                     <div class="eval-btn-group">
-                        <button id="kanji-btn-ok" class="eval-btn ok" onclick="setKanjiEval(true)">⭕ できた！</button>
-                        <button id="kanji-btn-ng" class="eval-btn ng" onclick="setKanjiEval(false)">❌ まちがえた（要復習）</button>
+                        <button id="kanji-btn-ok" class="eval-btn ok" onclick="setKanjiEval(true)">⭕ パフェクト！できた</button>
+                        <button id="kanji-btn-ng" class="eval-btn ng" onclick="setKanjiEval(false)">❌ まちがえた番号がある</button>
+                    </div>
+
+                    <div id="kanji-wrong-num-box" style="display:none; margin-top:12px;">
+                        <span style="font-size:0.85rem; color:#dc2626; font-weight:bold;">まちがえた問題番号（例: 32, 35）：</span><br>
+                        <input type="text" id="kanji-wrong-input" placeholder="番号をメモ（13日目で見直せるよ）" style="width:100%; margin-top:4px;" oninput="saveKanjiWrongNumbers(this.value)">
                     </div>
                 </div>
             </div>
@@ -352,20 +363,19 @@
 
 <script>
     // --------------------------------------------------
-    // 📊 Googleスプレッドシート(GAS) 連携URL & CSV URL
+    // 📊 Google Apps Script (GAS) 連携URL
     // --------------------------------------------------
     const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzwgQ6zxzG27_0WvchBnHLGbwdHDdWM7gA-R4gUX4RdyUryZghycGXVO18V_bnFT6mC/exec"; 
-    const SPREADSHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vS5zB1_bZuI8Vk7FwuyP3OWjgRVGzpP9LZ542955Kqs8adn7ustm6FB_zUNWm9Jo2py9BYGddk1Z_Bz/pub?output=csv";
 
-    // 漢字の14日間スケジュール定義
+    // 漢字スケジュール
     const kanjiSchedule = {
         11: "11日目：31〜40番（書き）",
         12: "12日目：21〜40番の苦手なところ（書き）",
-        13: "13日目：全体復習",
+        13: "13日目：全体復習（11日目・12日目の弱点見直し）",
         14: "14日目：いよいよ育成テスト本番！"
     };
 
-    // 初期サンプルデータ（スプレッドシート読み込み失敗時のバックアップ）
+    // スプレッドシート読み込み失敗時のローカル用初期問題データ
     let questionsData = {
         11: {
             calc: [
@@ -394,78 +404,67 @@
 
     let gameState;
     try {
-        gameState = JSON.parse(localStorage.getItem('study_gamestate_v13')) || {
+        gameState = JSON.parse(localStorage.getItem('study_gamestate_v14')) || {
             completedDays: [],
             clearedStatus: {},
-            savedInputs: {}
+            savedInputs: {},
+            kanjiWrongNotes: {} // 漢字の失敗番号メモ保存領域
         };
     } catch(e) {
-        gameState = { completedDays: [], clearedStatus: {}, savedInputs: {} };
+        gameState = { completedDays: [], clearedStatus: {}, savedInputs: {}, kanjiWrongNotes: {} };
     }
 
     let viewingDay = 11;
 
     window.onload = function() {
-        loadSpreadsheetQuestions(); // スプレッドシートからの読み込みを開始
+        loadQuestionsFromGAS(); // GASからスプレッドシート問題データを読み込み
         updateDayContent();
     };
 
     // --------------------------------------------------
-    // 📥 スプレッドシート（CSV）から問題を自動取得する処理
+    // 📥 GAS経由でスプレッドシートから問題を自動取得（GET）
     // --------------------------------------------------
-    function loadSpreadsheetQuestions() {
-        if (!SPREADSHEET_CSV_URL) return;
+    function loadQuestionsFromGAS() {
+        if (!GAS_WEB_APP_URL) return;
 
-        fetch(SPREADSHEET_CSV_URL)
-            .then(response => response.text())
-            .then(csvText => {
-                parseCSVQuestions(csvText);
-                updateDayContent(); // 取得完了後に画面更新
+        fetch(GAS_WEB_APP_URL)
+            .then(res => res.json())
+            .then(rows => {
+                if (!rows || rows.length < 2) return;
+                
+                // スプレッドシートの行データを解析
+                // 列構成例: [日, 科目, 問題文, 画像URL, 種類(text/select), 選択肢(A|B|C), 正解]
+                rows.forEach((cols, idx) => {
+                    if (idx === 0) return; // ヘッダー行をスキップ
+                    const day = parseInt(cols[0]);
+                    const subject = cols[1]; // calc, science, social
+                    const qText = cols[2];
+                    const img = cols[3];
+                    const qType = cols[4];
+                    const options = cols[5] ? String(cols[5]).split('|') : [];
+                    const ansVal = String(cols[6]);
+
+                    if (!day || !subject) return;
+
+                    if (!questionsData[day]) questionsData[day] = { calc: [], science: [], social: [] };
+                    if (!questionsData[day][subject]) questionsData[day][subject] = [];
+
+                    questionsData[day][subject].push({
+                        id: questionsData[day][subject].length,
+                        q: qText,
+                        imgUrl: img,
+                        type: qType,
+                        options: options,
+                        answers: [{ label: "答え", ans: ansVal }]
+                    });
+                });
+                updateDayContent(); // 問題読み込み後に画面再描画
             })
-            .catch(err => console.log("CSV読み込みスキップ（サンプルデータを使用）:", err));
-    }
-
-    function parseCSVQuestions(csvText) {
-        const lines = csvText.split('\n');
-        if (lines.length < 2) return;
-
-        // CSV構造を解析して questionsData にロードする
-        // [日, 科目, 問題文, 画像URL, 種類, 選択肢(カンマ区切り), 正解]
-        lines.forEach((line, idx) => {
-            if (idx === 0 || !line.trim()) return;
-            const cols = line.split(',').map(c => c.trim().replace(/^"(.*)"$/, '$1'));
-            if (cols.length < 7) return;
-
-            const day = parseInt(cols[0]);
-            const subject = cols[1]; // calc, science, social
-            const qText = cols[2];
-            const img = cols[3];
-            const qType = cols[4]; // text or select
-            const options = cols[5] ? cols[5].split('|') : [];
-            const ansVal = cols[6];
-
-            if (!day || !subject) return;
-
-            if (!questionsData[day]) {
-                questionsData[day] = { calc: [], science: [], social: [] };
-            }
-            if (!questionsData[day][subject]) {
-                questionsData[day][subject] = [];
-            }
-
-            questionsData[day][subject].push({
-                id: questionsData[day][subject].length,
-                q: qText,
-                imgUrl: img,
-                type: qType,
-                options: options,
-                answers: [{ label: "答え", ans: ansVal }]
-            });
-        });
+            .catch(err => console.log("GAS読み込みスキップ（バックアップデータを使用）:", err));
     }
 
     // --------------------------------------------------
-    // 📤 スプレッドシート(GAS) へのログ送信処理
+    // 📤 GASへ学習ログ・解答結果を送信（POST）
     // --------------------------------------------------
     function sendToGoogleSheet(dataPayload) {
         if (!GAS_WEB_APP_URL) return;
@@ -480,7 +479,6 @@
         .catch(err => console.error("スプレッドシート送信エラー:", err));
     }
 
-    // タブ切替（きょうの課題 / カード図鑑）
     function switchTab(tabName) {
         document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
         document.querySelectorAll('.section').forEach(sec => sec.classList.remove('active'));
@@ -495,7 +493,6 @@
         }
     }
 
-    // 科目切替（漢字 / 算数 / 理科 / 社会）
     function switchSubject(subjectKey) {
         document.querySelectorAll('.subject-btn').forEach(btn => btn.classList.remove('active'));
         document.querySelectorAll('.subject-section').forEach(sec => sec.classList.remove('active'));
@@ -514,19 +511,38 @@
         if (!gameState.clearedStatus[viewingDay]) {
             gameState.clearedStatus[viewingDay] = { kanji: null, calc: {}, science: {}, social: {} };
         }
-        if (!gameState.savedInputs[viewingDay]) {
-            gameState.savedInputs[viewingDay] = {};
-        }
+        if (!gameState.savedInputs[viewingDay]) gameState.savedInputs[viewingDay] = {};
+        if (!gameState.kanjiWrongNotes) gameState.kanjiWrongNotes = {};
 
-        // 漢字の評価状態をボタンに反映
+        // 漢字のメモ機能と評価ボタンの描画
         const kanjiStatus = gameState.clearedStatus[viewingDay].kanji;
         const btnOk = document.getElementById('kanji-btn-ok');
         const btnNg = document.getElementById('kanji-btn-ng');
+        const wrongBox = document.getElementById('kanji-wrong-num-box');
+        const wrongInput = document.getElementById('kanji-wrong-input');
+        const reviewMemo = document.getElementById('kanji-review-memo');
+
         btnOk.classList.remove('active');
         btnNg.classList.remove('active');
+        wrongBox.style.display = 'none';
 
         if (kanjiStatus === true) btnOk.classList.add('active');
-        if (kanjiStatus === false) btnNg.classList.add('active');
+        if (kanjiStatus === false) {
+            btnNg.classList.add('active');
+            wrongBox.style.display = 'block';
+            wrongInput.value = gameState.kanjiWrongNotes[viewingDay] || '';
+        }
+
+        // 13日目（復習日）に11日目・12日目のメモを一覧表示
+        if (viewingDay === 13) {
+            reviewMemo.style.display = 'block';
+            const memo11 = gameState.kanjiWrongNotes[11] ? `【11日目】${gameState.kanjiWrongNotes[11]}` : '';
+            const memo12 = gameState.kanjiWrongNotes[12] ? `【12日目】${gameState.kanjiWrongNotes[12]}` : '';
+            const combinedMemo = [memo11, memo12].filter(Boolean).join(' / ');
+            document.getElementById('kanji-review-text').innerText = combinedMemo || "復習が必要な番号メモはありません（全問正解！）";
+        } else {
+            reviewMemo.style.display = 'none';
+        }
 
         const currentData = questionsData[viewingDay] || { calc: [], science: [], social: [] };
 
@@ -537,15 +553,17 @@
         checkAllClearedStatus();
     }
 
-    // 漢字の評価設定（⭕できた / ❌まちがえた）
     function setKanjiEval(isOk) {
         if (!gameState.clearedStatus[viewingDay]) gameState.clearedStatus[viewingDay] = {};
         gameState.clearedStatus[viewingDay].kanji = isOk;
 
+        if (isOk) {
+            delete gameState.kanjiWrongNotes[viewingDay];
+        }
+
         saveGameState();
         updateDayContent();
 
-        // GAS送信
         sendToGoogleSheet({
             type: "ANSWER_SUBMIT",
             timestamp: new Date().toISOString(),
@@ -553,9 +571,15 @@
             category: "kanji",
             questionIndex: 0,
             questionText: kanjiSchedule[viewingDay] || "漢字学習",
-            userAnswers: [isOk ? "できた" : "まちがえた"],
+            userAnswers: [isOk ? "パーフェクト" : "要復習番号あり"],
             isCorrect: isOk
         });
+    }
+
+    function saveKanjiWrongNumbers(val) {
+        if (!gameState.kanjiWrongNotes) gameState.kanjiWrongNotes = {};
+        gameState.kanjiWrongNotes[viewingDay] = val;
+        saveGameState();
     }
 
     function renderCategoryQuestions(categoryKey, itemsArray, containerElem) {
@@ -657,7 +681,6 @@
             resElem.innerHTML = "<span class='incorrect'>❌ もう一度かんがえてみよう！</span>";
         }
 
-        // 📊 スプレッドシートに正誤ログを送信
         sendToGoogleSheet({
             type: "ANSWER_SUBMIT",
             timestamp: new Date().toISOString(),
@@ -673,7 +696,8 @@
     function checkAllClearedStatus() {
         if (!gameState.clearedStatus[viewingDay]) gameState.clearedStatus[viewingDay] = {};
         
-        const kanjiDone = gameState.clearedStatus[viewingDay].kanji === true;
+        // 漢字は「できた（true）」または「間違えた（false）」のどちらかを選択済みであればOK扱い
+        const kanjiDone = gameState.clearedStatus[viewingDay].kanji !== null && gameState.clearedStatus[viewingDay].kanji !== undefined;
 
         const currentData = questionsData[viewingDay];
         const status = gameState.clearedStatus[viewingDay];
@@ -702,7 +726,6 @@
         }
         saveGameState();
 
-        // 📊 スプレッドシートに完了イベントを送信
         sendToGoogleSheet({
             type: "DAY_COMPLETE",
             timestamp: new Date().toISOString(),
@@ -763,7 +786,7 @@
     }
 
     function saveGameState() {
-        localStorage.setItem('study_gamestate_v13', JSON.stringify(gameState));
+        localStorage.setItem('study_gamestate_v14', JSON.stringify(gameState));
     }
 </script>
 
