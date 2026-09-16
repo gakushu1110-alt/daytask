@@ -363,7 +363,7 @@
 
     let gameState;
     try {
-        gameState = JSON.parse(localStorage.getItem('study_gamestate_v15')) || {
+        gameState = JSON.parse(localStorage.getItem('study_gamestate_v16')) || {
             completedDays: [],
             clearedStatus: {},
             savedInputs: {},
@@ -379,10 +379,6 @@
         loadQuestionsFromGAS();
     };
 
-    // --------------------------------------------------
-    // 📥 画像通りのスプレッドシート列構造を100%解析する処理
-    // 列順: A:day, B:id, C:groupId, D:groupImage, E:subject, F:type, G:title, H:question, I:answer, J:options
-    // --------------------------------------------------
     function loadQuestionsFromGAS() {
         if (!GAS_WEB_APP_URL) return;
 
@@ -394,37 +390,34 @@
                 questionsData = {};
 
                 rows.forEach((cols, idx) => {
-                    if (idx === 0) return; // ヘッダー行をスキップ
+                    if (idx === 0) return;
 
-                    const day = parseInt(cols[0]); // A列: day
-                    const qId = cols[1];          // B列: id
-                    const grpImg = cols[3];       // D列: groupImage
-                    const rawSubject = cols[4];   // E列: subject (算数, 社会, 理科, 漢字)
-                    const qType = cols[5];        // F列: type (input, note, etc.)
-                    const qTitle = cols[6];       // G列: title (問1, (1), etc.)
-                    const qText = cols[7];        // H列: question
-                    const ansVal = String(cols[8] !== undefined ? cols[8] : '').trim(); // I列: answer
-                    const rawOptions = cols[9];   // J列: options (ア ...,イ ... 等)
+                    const day = parseInt(cols[0]); 
+                    const qId = cols[1];          
+                    const grpImg = cols[3];       
+                    const rawSubject = cols[4];   
+                    const qType = cols[5];        
+                    const qTitle = cols[6];       
+                    const qText = cols[7];        
+                    const ansVal = String(cols[8] !== undefined ? cols[8] : '').trim(); 
+                    const rawOptions = cols[9];   
 
                     if (!day || !rawSubject) return;
 
-                    // 科目名をキーコードに変換 (算数->calc, 社会->social, 理科->science)
                     let subKey = '';
                     if (rawSubject === '算数') subKey = 'calc';
                     else if (rawSubject === '社会') subKey = 'social';
                     else if (rawSubject === '理科') subKey = 'science';
-                    else if (rawSubject === '漢字') return; // 漢字は固有処理
+                    else if (rawSubject === '漢字') return; 
 
                     if (!questionsData[day]) questionsData[day] = { calc: [], science: [], social: [] };
                     if (!questionsData[day][subKey]) questionsData[day][subKey] = [];
 
-                    // オプション（選択肢）のパース（全角カンマや改行対応）
                     let optionsArray = [];
                     if (rawOptions) {
                         optionsArray = String(rawOptions).split(/[,、|]/).map(o => o.trim()).filter(Boolean);
                     }
 
-                    // 表示用タイトルと問題文の結合
                     let fullQ = qTitle ? `${qTitle} ${qText}` : qText;
 
                     questionsData[day][subKey].push({
@@ -624,6 +617,9 @@
         saveGameState();
     }
 
+    // --------------------------------------------------
+    // 🔍 判定ロジック（選択肢の記号/テキストの揺れ吸収処理）
+    // --------------------------------------------------
     function checkSubAnswers(categoryKey, qIdx) {
         const currentData = questionsData[viewingDay] || { calc: [], science: [], social: [] };
         const item = currentData[categoryKey][qIdx];
@@ -636,10 +632,27 @@
             const inputKey = `${categoryKey}-${qIdx}-${aIdx}`;
             const inputElem = document.getElementById(inputKey);
             const userVal = inputElem ? inputElem.value.trim() : '';
+            const correctAns = String(ansObj.ans).trim();
+
             userAnswersList.push(userVal);
 
-            if (ansObj.ans !== "" && userVal !== ansObj.ans) {
+            if (!correctAns) {
                 allSubCorrect = false;
+                return;
+            }
+
+            if (item.type === "select") {
+                // 選択肢の場合、「エ タンポポ」から頭文字の「エ」を取得、または完全一致/前方一致を判定
+                const userFirstChar = userVal.split(/[\s ]/)[0]; // 「エ タンポポ」→「エ」
+                const isMatch = (userVal === correctAns) || 
+                                (userFirstChar === correctAns) || 
+                                (userVal.startsWith(correctAns)) || 
+                                (correctAns.startsWith(userFirstChar));
+
+                if (!isMatch) allSubCorrect = false;
+            } else {
+                // 記述式の場合（完全一致）
+                if (userVal !== correctAns) allSubCorrect = false;
             }
         });
 
@@ -757,7 +770,7 @@
     }
 
     function saveGameState() {
-        localStorage.setItem('study_gamestate_v15', JSON.stringify(gameState));
+        localStorage.setItem('study_gamestate_v16', JSON.stringify(gameState));
     }
 </script>
 
