@@ -279,8 +279,13 @@
                     <div style="font-weight: bold; font-size: 1.05rem; margin-bottom: 4px;">✍️ 漢字（ノート手書き練習）</div>
                     <div id="kanji-instruction" style="color: #1e40af; margin-bottom: 12px; font-weight: bold;"></div>
                     
+                    <!-- 🖼️ 漢字用画像の表示枠 -->
+                    <div id="kanji-img-container" style="display:none;" class="problem-img-box">
+                        <img id="kanji-img" src="" alt="漢字問題画像" onerror="this.onerror=null; this.parentElement.style.display='none';">
+                    </div>
+
                     <div id="kanji-review-memo" style="display:none; background:#fef3c7; border:1px solid #f59e0b; padding:10px; border-radius:6px; margin-bottom:12px; font-size:0.9rem; color:#b45309;">
-                        <strong>🔍 11・12日目の復習メモ：</strong><br>
+                        <strong>🔍 復習メモ：</strong><br>
                         <span id="kanji-review-text">なし</span>
                     </div>
 
@@ -291,8 +296,8 @@
                     </div>
 
                     <div id="kanji-wrong-num-box" style="display:none; margin-top:12px;">
-                        <span style="font-size:0.85rem; color:#dc2626; font-weight:bold;">まちがえた問題番号（例: 32, 35）：</span><br>
-                        <input type="text" id="kanji-wrong-input" placeholder="番号をメモ（13日目で見直せるよ）" style="width:100%; margin-top:4px;" oninput="saveKanjiWrongNumbers(this.value)">
+                        <span style="font-size:0.85rem; color:#dc2626; font-weight:bold;">まちがえた問題番号（例: 3, 7）：</span><br>
+                        <input type="text" id="kanji-wrong-input" placeholder="番号をメモ（見直し日で見直せるよ）" style="width:100%; margin-top:4px;" oninput="saveKanjiWrongNumbers(this.value)">
                     </div>
                 </div>
             </div>
@@ -353,8 +358,8 @@
     const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzwgQ6zxzG27_0WvchBnHLGbwdHDdWM7gA-R4gUX4RdyUryZghycGXVO18V_bnFT6mC/exec"; 
 
     const kanjiSchedule = {
-        11: "11日目：31〜40番（書き）",
-        12: "12日目：21〜40番の苦手なところ（書き）",
+        11: "11日目：1〜20番（書き）",
+        12: "12日目：21〜40番（書き）",
         13: "13日目：全体復習（11日目・12日目の弱点見直し）",
         14: "14日目：いよいよ育成テスト本番！"
     };
@@ -363,7 +368,7 @@
 
     let gameState;
     try {
-        gameState = JSON.parse(localStorage.getItem('study_gamestate_v16')) || {
+        gameState = JSON.parse(localStorage.getItem('study_gamestate_v18')) || {
             completedDays: [],
             clearedStatus: {},
             savedInputs: {},
@@ -404,13 +409,19 @@
 
                     if (!day || !rawSubject) return;
 
+                    if (!questionsData[day]) questionsData[day] = { calc: [], science: [], social: [], kanji: [] };
+
                     let subKey = '';
                     if (rawSubject === '算数') subKey = 'calc';
                     else if (rawSubject === '社会') subKey = 'social';
                     else if (rawSubject === '理科') subKey = 'science';
-                    else if (rawSubject === '漢字') return; 
+                    else if (rawSubject === '漢字') {
+                        if (grpImg) {
+                            questionsData[day].kanji.push({ imgUrl: grpImg, qText: qText });
+                        }
+                        return;
+                    }
 
-                    if (!questionsData[day]) questionsData[day] = { calc: [], science: [], social: [] };
                     if (!questionsData[day][subKey]) questionsData[day][subKey] = [];
 
                     let optionsArray = [];
@@ -475,7 +486,22 @@
 
     function updateDayContent() {
         document.getElementById('cycle-day-text').innerText = `学習サイクル: ${viewingDay}日目`;
-        document.getElementById('kanji-instruction').innerText = kanjiSchedule[viewingDay] || "漢字の学習";
+        
+        // 漢字指示の柔軟表示
+        const defaultInstruction = kanjiSchedule[viewingDay] || `${viewingDay}日目：漢字の学習（ノートに書いて練習）`;
+        document.getElementById('kanji-instruction').innerText = defaultInstruction;
+
+        // 🖼️ 漢字画像の表示処理
+        const kanjiImgBox = document.getElementById('kanji-img-container');
+        const kanjiImgElem = document.getElementById('kanji-img');
+        const currentKanjiData = questionsData[viewingDay] && questionsData[viewingDay].kanji ? questionsData[viewingDay].kanji : [];
+
+        if (currentKanjiData.length > 0 && currentKanjiData[0].imgUrl) {
+            kanjiImgElem.src = currentKanjiData[0].imgUrl;
+            kanjiImgBox.style.display = 'block';
+        } else {
+            kanjiImgBox.style.display = 'none';
+        }
 
         if (!gameState.clearedStatus[viewingDay]) {
             gameState.clearedStatus[viewingDay] = { kanji: null, calc: {}, science: {}, social: {} };
@@ -562,7 +588,7 @@
                     <div style="font-weight:bold; margin-bottom: 6px;">${item.q}</div>
                     ${item.imgUrl ? `
                         <div class="problem-img-box">
-                            <img src="${item.imgUrl}" alt="問題画像" onerror="this.onerror=null; this.parentElement.innerHTML='<div style=\\'color:#ef4444; font-size:0.85rem;\\'>⚠️ 画像が見つかりません (${item.imgUrl})</div>';">
+                            <img src="${item.imgUrl}" alt="問題画像" onerror="this.onerror=null; this.parentElement.style.display='none';">
                         </div>
                     ` : ''}
                     <div class="sub-inputs-container">
@@ -617,9 +643,6 @@
         saveGameState();
     }
 
-    // --------------------------------------------------
-    // 🔍 判定ロジック（選択肢の記号/テキストの揺れ吸収処理）
-    // --------------------------------------------------
     function checkSubAnswers(categoryKey, qIdx) {
         const currentData = questionsData[viewingDay] || { calc: [], science: [], social: [] };
         const item = currentData[categoryKey][qIdx];
@@ -642,8 +665,7 @@
             }
 
             if (item.type === "select") {
-                // 選択肢の場合、「エ タンポポ」から頭文字の「エ」を取得、または完全一致/前方一致を判定
-                const userFirstChar = userVal.split(/[\s ]/)[0]; // 「エ タンポポ」→「エ」
+                const userFirstChar = userVal.split(/[\s ]/)[0];
                 const isMatch = (userVal === correctAns) || 
                                 (userFirstChar === correctAns) || 
                                 (userVal.startsWith(correctAns)) || 
@@ -651,7 +673,6 @@
 
                 if (!isMatch) allSubCorrect = false;
             } else {
-                // 記述式の場合（完全一致）
                 if (userVal !== correctAns) allSubCorrect = false;
             }
         });
@@ -724,17 +745,24 @@
         document.getElementById('congrats-modal').style.display = 'none';
     }
 
+    // 動的日付生成モーダル（15日目以降も自動でリスト化）
     function openPastModal() {
         const listDiv = document.getElementById('modal-day-list');
         let html = '';
-        for (let i = 11; i <= 14; i++) {
+
+        // スプレッドシートにあるすべてのキー(11, 12, 13, 14, 15...)を取得してソート
+        const loadedDays = Object.keys(questionsData).map(Number).filter(n => !isNaN(n));
+        const allDays = Array.from(new Set([11, 12, 13, 14, ...loadedDays])).sort((a,b) => a - b);
+
+        allDays.forEach(i => {
             const isDone = gameState.completedDays.includes(i) ? "✅ 完了済" : "⏳ 未了";
             html += `
                 <button class="sub-btn" style="width:100%; text-align:left; margin-bottom:8px; padding:10px;" onclick="selectDay(${i})">
                     ${i}日目 - <span style="${gameState.completedDays.includes(i)?'color:green':'color:orange'}">${isDone}</span>
                 </button>
             `;
-        }
+        });
+
         listDiv.innerHTML = html;
         document.getElementById('modal-bg').style.display = 'flex';
     }
@@ -770,7 +798,7 @@
     }
 
     function saveGameState() {
-        localStorage.setItem('study_gamestate_v16', JSON.stringify(gameState));
+        localStorage.setItem('study_gamestate_v18', JSON.stringify(gameState));
     }
 </script>
 
