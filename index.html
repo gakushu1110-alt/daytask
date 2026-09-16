@@ -289,14 +289,10 @@
     // --------------------------------------------------
     // 📊 Googleスプレッドシート(GAS) 連携設定
     // --------------------------------------------------
-    // 発行したGASのWeb App URLをここに設定してください
-    const GAS_WEB_APP_URL = "YOUR_GAS_WEB_APP_URL_HERE"; 
+    const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzwgQ6zxzG27_0WvchBnHLGbwdHDdWM7gA-R4gUX4RdyUryZghycGXVO18V_bnFT6mC/exec"; 
 
     function sendToGoogleSheet(dataPayload) {
-        if (!GAS_WEB_APP_URL || GAS_WEB_APP_URL === "YOUR_GAS_WEB_APP_URL_HERE") {
-            console.log("スプレッドシート送信スキップ（GAS URL未設定）:", dataPayload);
-            return;
-        }
+        if (!GAS_WEB_APP_URL) return;
 
         fetch(GAS_WEB_APP_URL, {
             method: "POST",
