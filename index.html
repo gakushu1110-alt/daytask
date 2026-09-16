@@ -286,6 +286,30 @@
 </div>
 
 <script>
+    // --------------------------------------------------
+    // 📊 Googleスプレッドシート(GAS) 連携設定
+    // --------------------------------------------------
+    // 発行したGASのWeb App URLをここに設定してください
+    const GAS_WEB_APP_URL = "YOUR_GAS_WEB_APP_URL_HERE"; 
+
+    function sendToGoogleSheet(dataPayload) {
+        if (!GAS_WEB_APP_URL || GAS_WEB_APP_URL === "YOUR_GAS_WEB_APP_URL_HERE") {
+            console.log("スプレッドシート送信スキップ（GAS URL未設定）:", dataPayload);
+            return;
+        }
+
+        fetch(GAS_WEB_APP_URL, {
+            method: "POST",
+            mode: "no-cors",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(dataPayload)
+        })
+        .then(() => console.log("スプレッドシート送信完了:", dataPayload))
+        .catch(err => console.error("スプレッドシート送信エラー:", err));
+    }
+
     const kanjiSchedule = {
         11: "11日目：31〜40番（書き）",
         12: "12日目：21〜40番の苦手なところ（書き）",
@@ -293,7 +317,6 @@
         14: "14日目：いよいよ育成テスト本番！"
     };
 
-    // 問題データサンプル（選択式・記述式両対応）
     const sampleData = {
         11: {
             calc: [
@@ -453,11 +476,13 @@
         const resElem = document.getElementById(`${categoryKey}-res-${qIdx}`);
 
         let allSubCorrect = true;
+        let userAnswersList = [];
 
         item.answers.forEach((ansObj, aIdx) => {
             const inputKey = `${categoryKey}-${qIdx}-${aIdx}`;
             const inputElem = document.getElementById(inputKey);
             const userVal = inputElem ? inputElem.value.trim() : '';
+            userAnswersList.push(userVal);
 
             if (ansObj.ans !== "" && userVal !== ansObj.ans) {
                 allSubCorrect = false;
@@ -473,6 +498,18 @@
         } else {
             resElem.innerHTML = "<span class='incorrect'>❌ もう一度かんがえてみよう！</span>";
         }
+
+        // 📊 スプレッドシートに正誤ログを送信
+        sendToGoogleSheet({
+            type: "ANSWER_SUBMIT",
+            timestamp: new Date().toISOString(),
+            day: viewingDay,
+            category: categoryKey,
+            questionIndex: qIdx,
+            questionText: item.q,
+            userAnswers: userAnswersList,
+            isCorrect: allSubCorrect
+        });
     }
 
     function checkAllClearedStatus() {
@@ -508,6 +545,14 @@
             gameState.completedDays.push(viewingDay);
         }
         saveGameState();
+
+        // 📊 スプレッドシートに完了イベントを送信
+        sendToGoogleSheet({
+            type: "DAY_COMPLETE",
+            timestamp: new Date().toISOString(),
+            day: viewingDay,
+            status: "COMPLETED"
+        });
 
         document.getElementById('congrats-modal').style.display = 'flex';
     }
