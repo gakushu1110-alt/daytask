@@ -1,47 +1,570 @@
-【プロジェクト概要】
-中学受験（日能研）の復習学習をサポートするWebアプリ（HTML/CSS/JS）。
-GitHub（GitHub Pages）で配信し、Googleスプレッドシート（Google Apps Script/API）と連携して学習データを記録。
-毎日の課題をクリアすると、7日目の育成テスト当日に「超激レア・サッカー選手カード」が解放される仕組み。
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>まいにち学習＆ワールドカードコレクション</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --bg-color: #f8fafc;
+            --card-bg: #ffffff;
+            --text-color: #1e293b;
+            --success: #22c55e;
+            --danger: #ef4444;
+        }
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 750px;
+            margin: 0 auto;
+        }
+        h1 {
+            text-align: center;
+            color: var(--primary);
+            font-size: 1.8rem;
+            margin-bottom: 5px;
+        }
+        .subtitle {
+            text-align: center;
+            color: #64748b;
+            margin-bottom: 25px;
+            font-size: 0.95rem;
+        }
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+            margin-bottom: 20px;
+        }
+        .tab-menu {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .tab-btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            background: #e2e8f0;
+            color: #475569;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: 0.2s;
+        }
+        .tab-btn.active {
+            background: var(--primary);
+            color: white;
+        }
+        .section {
+            display: none;
+        }
+        .section.active {
+            display: block;
+        }
+        .day-info {
+            background: #eff6ff;
+            color: #1e40af;
+            padding: 12px 15px;
+            border-radius: 8px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .sub-btn {
+            background: white;
+            border: 1px solid #1e40af;
+            color: #1e40af;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: bold;
+        }
+        .task-section-title {
+            font-size: 1.15rem;
+            font-weight: bold;
+            color: var(--primary);
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 6px;
+            margin-top: 20px;
+            margin-bottom: 12px;
+        }
+        .sub-question-item {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 14px;
+            margin-bottom: 12px;
+        }
+        .problem-img-box {
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            padding: 10px;
+            text-align: center;
+            margin: 10px 0;
+        }
+        .problem-img-box img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 6px;
+        }
+        .sub-inputs-container {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 8px;
+            margin-bottom: 8px;
+        }
+        .sub-input-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        input[type="text"], select {
+            padding: 8px 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            font-size: 1rem;
+            box-sizing: border-box;
+        }
+        button.action-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+        button.action-btn:hover {
+            background: var(--primary-hover);
+        }
+        button.action-btn:disabled {
+            background: #94a3b8;
+            cursor: not-allowed;
+        }
+        .result-msg {
+            font-weight: bold;
+            margin-left: 8px;
+            display: inline-block;
+            font-size: 0.95rem;
+        }
+        .correct { color: var(--success); }
+        .incorrect { color: var(--danger); }
 
---------------------------------------------------
-■ 1. 達成ボーナス・カードコレクションの仕様（1週1枚・カウントダウン型）
---------------------------------------------------
-・テーマ国：1週間（7日間）ごとに1か国。
-  - 第1週：🇦🇷 アルゼンチン代表
-  - 第2週以降：FIFAランキング順（🇫🇷 フランス、🇪🇸 スペイン、🏴󠁧󠁢󠁥󠁮󠁧󠁿 イングランド、🇧🇷 ブラジル...）
+        /* モーダル＆全問クリア演出 */
+        #modal-bg, #congrats-modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 450px;
+            max-height: 80vh;
+            overflow-y: auto;
+            text-align: center;
+        }
+        .congrats-card {
+            background: linear-gradient(135deg, #fffbe3 0%, #ffffff 100%);
+            border: 3px solid #f59e0b;
+            border-radius: 16px;
+            padding: 25px;
+            animation: popIn 0.4s ease-out;
+        }
+        @keyframes popIn {
+            0% { transform: scale(0.7); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+    </style>
+</head>
+<body>
 
-・1〜6日目のモチベーション演出（画像アップロード不要）：
-  - 図鑑画面のカード枠が毎日少しずつ豪華に変化（パズル・カウントダウン方式）。
-  - 1日目: ★マーク点灯
-  - 2日目: ゴールドフレーム（金枠）化
-  - 3〜5日目: 選手ステータス（POS/FW, SPD/99など）やホログラムエフェクトが解放
-  - 6日目: 「LOCK解除まであと1日！」のカウントダウン点灯
+<div class="container">
+    <h1>⚽ まいにち学習＆カードコレクション</h1>
+    <div class="subtitle">算数・理科・社会・漢字をクリアして、レアカードを獲得しよう！</div>
 
-・7日目（育成テスト当日）：
-  - GitHubの `images/arg_7.jpg`（アウェーユニフォーム＆トロフィー掲揚の超激レアカード）が完全ドカンと解放！
+    <!-- タブボタン -->
+    <div class="tab-menu">
+        <button class="tab-btn active" onclick="switchTab('study')">きょうの課題</button>
+        <button class="tab-btn" onclick="switchTab('collection')">カード図鑑</button>
+    </div>
 
---------------------------------------------------
-■ 2. システム・GitHub・スプレッドシート連携仕様
---------------------------------------------------
-・ファイル・インフラ構成：
-  - HTML/CSS/JS (GitHub Pagesで配信)
-  - images/ (GitHubリポジトリ内画像フォルダ)
-  - Googleスプレッドシート連携 (GAS / Webhook経由で学習ログ・正誤結果・完了ステータスを自動送信・記録)
+    <!-- きょうの課題セクション -->
+    <div id="study-section" class="section active">
+        <div class="card">
+            <div class="day-info">
+                <div>
+                    <span id="cycle-day-text" style="font-size: 1.1rem;">学習サイクル: 11日目</span>
+                </div>
+                <button class="sub-btn" onclick="openPastModal()">📁 ほかの日をえらぶ</button>
+            </div>
 
-・UI・操作性（慶くんからのフィードバック反映済）：
-  - ① 正解しても入力欄の入力値/選択肢を消さずに保持する。
-  - ② PC入力時、Enterキーで即座に「こたえあわせ」を実行する。
-  - ③ 選択式（プルダウン）問題の正誤判定を正確に行う。
-  - ④ 不正解時にすぐ答えを出さず、「もう一度かんがえてみよう！」と再挑戦を促す。
-  - ⑤ 全問クリア時に「おめでとう！」のダイアログと祝福演出を表示する。
+            <!-- 1. 漢字 -->
+            <div class="sub-question-item" style="background:#eff6ff; border-color:#bfdbfe;">
+                <div style="font-weight: bold; font-size: 1.05rem; margin-bottom: 4px;">✍️ 漢字（ノートに手書き）</div>
+                <div id="kanji-instruction" style="color: #1e40af; margin-bottom: 8px; font-weight: bold;"></div>
+                <label style="cursor: pointer; display: flex; align-items: center; gap: 6px;">
+                    <input type="checkbox" id="kanji-check" onchange="checkAllClearedStatus()"> ノートに書いてやった！
+                </label>
+            </div>
 
-・漢字の扱い：
-  手書きノート学習を前提とし、「ノートに書いてやった！」のチェックボックスで完了判定。
+            <!-- 2. 算数 -->
+            <div class="task-section-title">🔢 算数トレーニング</div>
+            <div id="calc-container"></div>
 
---------------------------------------------------
-■ 3. 新チャットで進める作業
---------------------------------------------------
-1. 本日分（11日目）および今後の問題データ（問題文・解答）の登録：
-   - 算数・理科・社会の「具体的問題文」「解答選択肢/入力欄」「正解判定データ」をコードに組み込む。
-   - 社会などの問題画像（例: images/0915shakai1.jpg など）の紐付け。
-2. スプレッドシート連携機能 ＋ 上記の修正（Enterキー判定、入力保持、全問クリア演出、1〜6日目カウントダウン）を含めた最新コードの構築。
+            <!-- 3. 理科 -->
+            <div class="task-section-title">🔬 理科トレーニング</div>
+            <div id="science-container"></div>
+
+            <!-- 4. 社会 -->
+            <div class="task-section-title">🌍 社会トレーニング</div>
+            <div id="social-container"></div>
+
+            <div style="text-align: center; margin-top: 25px;">
+                <button id="complete-btn" class="action-btn" style="padding: 14px 28px; font-size: 1.15rem;" onclick="completeToday()" disabled>全問クリアして完了！ 🏆</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- コレクションセクション -->
+    <div id="collection-section" class="section">
+        <div class="card">
+            <h2>🏆 カード・コレクション</h2>
+            <p style="font-size: 0.9rem; color: #64748b; margin-bottom: 20px;">14日目のテスト本番クリアで超激レアカードが解放されるぞ！</p>
+            <div id="card-display-area"></div>
+        </div>
+    </div>
+</div>
+
+<!-- 日選択モーダル -->
+<div id="modal-bg" onclick="closePastModal(event)">
+    <div class="modal-content" onclick="event.stopPropagation()">
+        <h3>📁 学習日をえらぶ</h3>
+        <div id="modal-day-list"></div>
+        <div style="text-align: right; margin-top: 15px;">
+            <button class="sub-btn" onclick="closePastModal()">とじる</button>
+        </div>
+    </div>
+</div>
+
+<!-- ✨ 全問クリア！おめでとうモーダル -->
+<div id="congrats-modal">
+    <div class="modal-content congrats-card">
+        <div style="font-size: 3rem; margin-bottom: 5px;">🎉 🏆 🎉</div>
+        <h2 style="color: #d97706; margin-top: 0; font-size: 1.6rem;">ぜんぶクリア！おめでとう！</h2>
+        <p style="font-size: 1rem; color: #334155; line-height: 1.5;">
+            今日の課題をすべて見事に解き明かしました！<br>
+            素晴らしい集中力です！この調子で明日も頑張ろう！
+        </p>
+        <button class="action-btn" style="padding: 10px 24px; font-size: 1rem; background: #f59e0b;" onclick="closeCongratsModal()">やったー！</button>
+    </div>
+</div>
+
+<script>
+    const kanjiSchedule = {
+        11: "11日目：31〜40番（書き）",
+        12: "12日目：21〜40番の苦手なところ（書き）",
+        13: "13日目：全体復習",
+        14: "14日目：いよいよ育成テスト本番！"
+    };
+
+    // 問題データサンプル（選択式・記述式両対応）
+    const sampleData = {
+        11: {
+            calc: [
+                {
+                    id: 0,
+                    q: "(1) 計算をしましょう: 125 × 8",
+                    answers: [{ label: "答え", ans: "1000" }]
+                }
+            ],
+            science: [],
+            social: [
+                {
+                    id: 0,
+                    q: "(1) 画像を見て適切な選択肢を選びましょう",
+                    imgUrl: "images/0915shakai1.jpg",
+                    type: "select",
+                    options: ["雨温図A", "雨温図B", "雨温図C"],
+                    answers: [{ label: "答え", ans: "雨温図A" }]
+                },
+                {
+                    id: 1,
+                    q: "(2) 記述問題の例",
+                    imgUrl: "images/0915shakai2.jpg",
+                    type: "text",
+                    answers: [{ label: "答え", ans: "平野" }]
+                }
+            ]
+        }
+    };
+
+    let gameState;
+    try {
+        gameState = JSON.parse(localStorage.getItem('study_gamestate_v12')) || {
+            completedDays: [],
+            clearedStatus: {},
+            savedInputs: {}
+        };
+    } catch(e) {
+        gameState = { completedDays: [], clearedStatus: {}, savedInputs: {} };
+    }
+
+    let viewingDay = 11;
+
+    window.onload = function() {
+        updateDayContent();
+    };
+
+    function switchTab(tabName) {
+        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+        document.querySelectorAll('.section').forEach(sec => sec.classList.remove('active'));
+
+        if(tabName === 'study') {
+            document.querySelectorAll('.tab-btn')[0].classList.add('active');
+            document.getElementById('study-section').classList.add('active');
+        } else if(tabName === 'collection') {
+            document.querySelectorAll('.tab-btn')[1].classList.add('active');
+            document.getElementById('collection-section').classList.add('active');
+            renderCollection();
+        }
+    }
+
+    function updateDayContent() {
+        document.getElementById('cycle-day-text').innerText = `学習サイクル: ${viewingDay}日目`;
+        document.getElementById('kanji-instruction').innerText = kanjiSchedule[viewingDay] || "漢字の学習";
+
+        if (!gameState.clearedStatus[viewingDay]) {
+            gameState.clearedStatus[viewingDay] = { kanji: false, calc: {}, science: {}, social: {} };
+        }
+        if (!gameState.savedInputs[viewingDay]) {
+            gameState.savedInputs[viewingDay] = {};
+        }
+
+        document.getElementById('kanji-check').checked = gameState.clearedStatus[viewingDay].kanji || false;
+
+        const currentData = sampleData[viewingDay] || { calc: [], science: [], social: [] };
+
+        renderCategoryQuestions('calc', currentData.calc || [], document.getElementById('calc-container'));
+        renderCategoryQuestions('science', currentData.science || [], document.getElementById('science-container'));
+        renderCategoryQuestions('social', currentData.social || [], document.getElementById('social-container'));
+
+        checkAllClearedStatus();
+    }
+
+    function renderCategoryQuestions(categoryKey, itemsArray, containerElem) {
+        if (!itemsArray || itemsArray.length === 0) {
+            containerElem.innerHTML = `<div style="color:#94a3b8; font-size:0.9rem; padding:10px;">（問題データ準備中）</div>`;
+            return;
+        }
+
+        let html = '';
+        itemsArray.forEach((item, qIdx) => {
+            const isQDone = (gameState.clearedStatus[viewingDay] && gameState.clearedStatus[viewingDay][categoryKey]) ? (gameState.clearedStatus[viewingDay][categoryKey][qIdx] === true) : false;
+
+            html += `
+                <div class="sub-question-item">
+                    <div style="font-weight:bold; margin-bottom: 6px;">${item.q}</div>
+                    ${item.imgUrl ? `
+                        <div class="problem-img-box">
+                            <img src="${item.imgUrl}" alt="問題画像" onerror="this.onerror=null; this.parentElement.innerHTML='<div style=\\'color:#ef4444; font-size:0.85rem;\\'>⚠️ 画像が見つかりません (${item.imgUrl})</div>';">
+                        </div>
+                    ` : ''}
+                    <div class="sub-inputs-container">
+            `;
+
+            item.answers.forEach((ansObj, aIdx) => {
+                const inputKey = `${categoryKey}-${qIdx}-${aIdx}`;
+                const savedVal = gameState.savedInputs[viewingDay][inputKey] || '';
+
+                if (item.type === "select") {
+                    html += `
+                        <div class="sub-input-row">
+                            <span style="font-size: 0.9rem; font-weight: bold; color: #475569;">${ansObj.label}：</span>
+                            <select id="${inputKey}" onchange="saveInputValue('${inputKey}', this.value)">
+                                <option value="">えらんでね</option>
+                                ${item.options.map(opt => `<option value="${opt}" ${savedVal === opt ? 'selected' : ''}>${opt}</option>`).join('')}
+                            </select>
+                        </div>
+                    `;
+                } else {
+                    html += `
+                        <div class="sub-input-row">
+                            <span style="font-size: 0.9rem; font-weight: bold; color: #475569;">${ansObj.label}：</span>
+                            <input type="text" id="${inputKey}" placeholder="答えを入力" value="${savedVal}" 
+                                oninput="saveInputValue('${inputKey}', this.value)"
+                                onkeydown="handleKeyPress(event, '${categoryKey}', ${qIdx})" style="width: 180px;">
+                        </div>
+                    `;
+                }
+            });
+
+            html += `
+                    </div>
+                    <button class="action-btn" onclick="checkSubAnswers('${categoryKey}', ${qIdx})">こたえあわせ</button>
+                    <span id="${categoryKey}-res-${qIdx}" class="result-msg">${isQDone ? "<span class='correct'>⭕ 正解！</span>" : ""}</span>
+                </div>
+            `;
+        });
+        containerElem.innerHTML = html;
+    }
+
+    function handleKeyPress(event, categoryKey, qIdx) {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            checkSubAnswers(categoryKey, qIdx);
+        }
+    }
+
+    function saveInputValue(inputKey, val) {
+        if (!gameState.savedInputs[viewingDay]) gameState.savedInputs[viewingDay] = {};
+        gameState.savedInputs[viewingDay][inputKey] = val;
+        saveGameState();
+    }
+
+    function checkSubAnswers(categoryKey, qIdx) {
+        const currentData = sampleData[viewingDay] || { calc: [], science: [], social: [] };
+        const item = currentData[categoryKey][qIdx];
+        const resElem = document.getElementById(`${categoryKey}-res-${qIdx}`);
+
+        let allSubCorrect = true;
+
+        item.answers.forEach((ansObj, aIdx) => {
+            const inputKey = `${categoryKey}-${qIdx}-${aIdx}`;
+            const inputElem = document.getElementById(inputKey);
+            const userVal = inputElem ? inputElem.value.trim() : '';
+
+            if (ansObj.ans !== "" && userVal !== ansObj.ans) {
+                allSubCorrect = false;
+            }
+        });
+
+        if (allSubCorrect) {
+            resElem.innerHTML = "<span class='correct'>⭕ 正解！素晴らしい！</span>";
+            if (!gameState.clearedStatus[viewingDay][categoryKey]) gameState.clearedStatus[viewingDay][categoryKey] = {};
+            gameState.clearedStatus[viewingDay][categoryKey][qIdx] = true;
+            saveGameState();
+            checkAllClearedStatus();
+        } else {
+            resElem.innerHTML = "<span class='incorrect'>❌ もう一度かんがえてみよう！</span>";
+        }
+    }
+
+    function checkAllClearedStatus() {
+        const kanjiElem = document.getElementById('kanji-check');
+        const kanjiChecked = kanjiElem ? kanjiElem.checked : false;
+
+        if (!gameState.clearedStatus[viewingDay]) gameState.clearedStatus[viewingDay] = {};
+        gameState.clearedStatus[viewingDay].kanji = kanjiChecked;
+
+        const currentData = sampleData[viewingDay];
+        const status = gameState.clearedStatus[viewingDay];
+
+        let allCalcDone = currentData && currentData.calc.length > 0 ? currentData.calc.every((_, idx) => status.calc && status.calc[idx] === true) : true;
+        let allSciDone = currentData && currentData.science.length > 0 ? currentData.science.every((_, idx) => status.science && status.science[idx] === true) : true;
+        let allSocDone = currentData && currentData.social.length > 0 ? currentData.social.every((_, idx) => status.social && status.social[idx] === true) : true;
+
+        const btn = document.getElementById('complete-btn');
+
+        if (status.kanji && allCalcDone && allSciDone && allSocDone) {
+            btn.disabled = false;
+            btn.style.background = "var(--success)";
+            btn.innerText = "全問クリア！この日の課題を完了にする！ 🏆";
+        } else {
+            btn.disabled = true;
+            btn.style.background = "#94a3b8";
+            btn.innerText = "すべての問題（漢字・算数・理科・社会）をクリアしてね";
+        }
+        saveGameState();
+    }
+
+    function completeToday() {
+        if (!gameState.completedDays.includes(viewingDay)) {
+            gameState.completedDays.push(viewingDay);
+        }
+        saveGameState();
+
+        document.getElementById('congrats-modal').style.display = 'flex';
+    }
+
+    function closeCongratsModal() {
+        document.getElementById('congrats-modal').style.display = 'none';
+    }
+
+    function openPastModal() {
+        const listDiv = document.getElementById('modal-day-list');
+        let html = '';
+        for (let i = 11; i <= 14; i++) {
+            const isDone = gameState.completedDays.includes(i) ? "✅ 完了済" : "⏳ 未了";
+            html += `
+                <button class="sub-btn" style="width:100%; text-align:left; margin-bottom:8px; padding:10px;" onclick="selectDay(${i})">
+                    ${i}日目 - <span style="${gameState.completedDays.includes(i)?'color:green':'color:orange'}">${isDone}</span>
+                </button>
+            `;
+        }
+        listDiv.innerHTML = html;
+        document.getElementById('modal-bg').style.display = 'flex';
+    }
+
+    function closePastModal(event) {
+        if (!event || event.target.id === 'modal-bg') {
+            document.getElementById('modal-bg').style.display = 'none';
+        }
+    }
+
+    function selectDay(day) {
+        viewingDay = day;
+        updateDayContent();
+        closePastModal();
+    }
+
+    function renderCollection() {
+        const container = document.getElementById('card-display-area');
+        const isDay14Done = gameState.completedDays.includes(14);
+
+        let html = `
+            <div style="background:#eff6ff; border:2px solid #3b82f6; border-radius:12px; padding:20px; text-align:center;">
+                <h3>🇦🇷 アルゼンチン代表 スペシャルカード</h3>
+                <div style="margin:15px 0;">
+                    ${isDay14Done ? 
+                        `<img src="images/arg_7.jpg" alt="メッシ/アルゼンチン代表レアカード" style="max-width:100%; height:auto; border-radius:10px; box-shadow: 0 0 15px rgba(245, 158, 11, 0.5);">` : 
+                        `<div style="background:#cbd5e1; height:250px; display:flex; align-items:center; justify-content:center; border-radius:10px; color:#475569; font-weight:bold;">🔒 14日目のテスト当日クリアで解放！</div>`
+                    }
+                </div>
+            </div>
+        `;
+        container.innerHTML = html;
+    }
+
+    function saveGameState() {
+        localStorage.setItem('study_gamestate_v12', JSON.stringify(gameState));
+    }
+</script>
+
+</body>
+</html>
