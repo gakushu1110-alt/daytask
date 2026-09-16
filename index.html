@@ -13,6 +13,7 @@
             --text-color: #1e293b;
             --success: #22c55e;
             --danger: #ef4444;
+            --warning: #f59e0b;
         }
         body {
             font-family: 'Helvetica Neue', Arial, sans-serif;
@@ -34,7 +35,7 @@
         .subtitle {
             text-align: center;
             color: #64748b;
-            margin-bottom: 25px;
+            margin-bottom: 20px;
             font-size: 0.95rem;
         }
         .card {
@@ -44,10 +45,11 @@
             box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
             margin-bottom: 20px;
         }
+        /* メインタブ */
         .tab-menu {
             display: flex;
             gap: 10px;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
         }
         .tab-btn {
             flex: 1;
@@ -65,12 +67,42 @@
             background: var(--primary);
             color: white;
         }
-        .section {
+        /* 科目別切替ボタン */
+        .subject-menu {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+            overflow-x: auto;
+            padding-bottom: 5px;
+        }
+        .subject-btn {
+            flex: 1;
+            min-width: 70px;
+            padding: 8px 12px;
+            border: 2px solid #cbd5e1;
+            background: white;
+            color: #475569;
+            font-weight: bold;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            text-align: center;
+            white-space: nowrap;
+            transition: 0.2s;
+        }
+        .subject-btn.active {
+            border-color: var(--primary);
+            background: #eff6ff;
+            color: var(--primary);
+        }
+
+        .section, .subject-section {
             display: none;
         }
-        .section.active {
+        .section.active, .subject-section.active {
             display: block;
         }
+
         .day-info {
             background: #eff6ff;
             color: #1e40af;
@@ -93,15 +125,6 @@
             cursor: pointer;
             font-size: 0.85rem;
             font-weight: bold;
-        }
-        .task-section-title {
-            font-size: 1.15rem;
-            font-weight: bold;
-            color: var(--primary);
-            border-bottom: 2px solid #e2e8f0;
-            padding-bottom: 6px;
-            margin-top: 20px;
-            margin-bottom: 12px;
         }
         .sub-question-item {
             background: #f8fafc;
@@ -160,6 +183,32 @@
             background: #94a3b8;
             cursor: not-allowed;
         }
+
+        /* 漢字ボタン選択スタイル */
+        .eval-btn-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 8px;
+        }
+        .eval-btn {
+            padding: 6px 16px;
+            border-radius: 6px;
+            border: 1px solid #cbd5e1;
+            background: white;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .eval-btn.ok.active {
+            background: #dcfce7;
+            border-color: var(--success);
+            color: #15803d;
+        }
+        .eval-btn.ng.active {
+            background: #fee2e2;
+            border-color: var(--danger);
+            color: #b91c1c;
+        }
+
         .result-msg {
             font-weight: bold;
             margin-left: 8px;
@@ -208,7 +257,7 @@
     <h1>⚽ まいにち学習＆カードコレクション</h1>
     <div class="subtitle">算数・理科・社会・漢字をクリアして、レアカードを獲得しよう！</div>
 
-    <!-- タブボタン -->
+    <!-- メインタブ（きょうの課題／カード図鑑） -->
     <div class="tab-menu">
         <button class="tab-btn active" onclick="switchTab('study')">きょうの課題</button>
         <button class="tab-btn" onclick="switchTab('collection')">カード図鑑</button>
@@ -224,26 +273,42 @@
                 <button class="sub-btn" onclick="openPastModal()">📁 ほかの日をえらぶ</button>
             </div>
 
-            <!-- 1. 漢字 -->
-            <div class="sub-question-item" style="background:#eff6ff; border-color:#bfdbfe;">
-                <div style="font-weight: bold; font-size: 1.05rem; margin-bottom: 4px;">✍️ 漢字（ノートに手書き）</div>
-                <div id="kanji-instruction" style="color: #1e40af; margin-bottom: 8px; font-weight: bold;"></div>
-                <label style="cursor: pointer; display: flex; align-items: center; gap: 6px;">
-                    <input type="checkbox" id="kanji-check" onchange="checkAllClearedStatus()"> ノートに書いてやった！
-                </label>
+            <!-- 科目切替ボタン（漢字・算数・理科・社会） -->
+            <div class="subject-menu">
+                <button class="subject-btn active" onclick="switchSubject('kanji')">✍️ 漢字</button>
+                <button class="subject-btn" onclick="switchSubject('calc')">🔢 算数</button>
+                <button class="subject-btn" onclick="switchSubject('science')">🔬 理科</button>
+                <button class="subject-btn" onclick="switchSubject('social')">🌍 社会</button>
             </div>
 
-            <!-- 2. 算数 -->
-            <div class="task-section-title">🔢 算数トレーニング</div>
-            <div id="calc-container"></div>
+            <!-- 1. 漢字セクション -->
+            <div id="subject-kanji" class="subject-section active">
+                <div class="sub-question-item" style="background:#eff6ff; border-color:#bfdbfe;">
+                    <div style="font-weight: bold; font-size: 1.05rem; margin-bottom: 4px;">✍️ 漢字（ノート手書き練習）</div>
+                    <div id="kanji-instruction" style="color: #1e40af; margin-bottom: 12px; font-weight: bold;"></div>
+                    
+                    <div style="font-size:0.9rem; color:#475569; margin-bottom:6px;">今日の漢字学習の結果：</div>
+                    <div class="eval-btn-group">
+                        <button id="kanji-btn-ok" class="eval-btn ok" onclick="setKanjiEval(true)">⭕ できた！</button>
+                        <button id="kanji-btn-ng" class="eval-btn ng" onclick="setKanjiEval(false)">❌ まちがえた（要復習）</button>
+                    </div>
+                </div>
+            </div>
 
-            <!-- 3. 理科 -->
-            <div class="task-section-title">🔬 理科トレーニング</div>
-            <div id="science-container"></div>
+            <!-- 2. 算数セクション -->
+            <div id="subject-calc" class="subject-section">
+                <div id="calc-container"></div>
+            </div>
 
-            <!-- 4. 社会 -->
-            <div class="task-section-title">🌍 社会トレーニング</div>
-            <div id="social-container"></div>
+            <!-- 3. 理科セクション -->
+            <div id="subject-science" class="subject-section">
+                <div id="science-container"></div>
+            </div>
+
+            <!-- 4. 社会セクション -->
+            <div id="subject-social" class="subject-section">
+                <div id="social-container"></div>
+            </div>
 
             <div style="text-align: center; margin-top: 25px;">
                 <button id="complete-btn" class="action-btn" style="padding: 14px 28px; font-size: 1.15rem;" onclick="completeToday()" disabled>全問クリアして完了！ 🏆</button>
@@ -287,25 +352,12 @@
 
 <script>
     // --------------------------------------------------
-    // 📊 Googleスプレッドシート(GAS) 連携設定
+    // 📊 Googleスプレッドシート(GAS) 連携URL & CSV URL
     // --------------------------------------------------
     const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzwgQ6zxzG27_0WvchBnHLGbwdHDdWM7gA-R4gUX4RdyUryZghycGXVO18V_bnFT6mC/exec"; 
+    const SPREADSHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vS5zB1_bZuI8Vk7FwuyP3OWjgRVGzpP9LZ542955Kqs8adn7ustm6FB_zUNWm9Jo2py9BYGddk1Z_Bz/pub?output=csv";
 
-    function sendToGoogleSheet(dataPayload) {
-        if (!GAS_WEB_APP_URL) return;
-
-        fetch(GAS_WEB_APP_URL, {
-            method: "POST",
-            mode: "no-cors",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify(dataPayload)
-        })
-        .then(() => console.log("スプレッドシート送信完了:", dataPayload))
-        .catch(err => console.error("スプレッドシート送信エラー:", err));
-    }
-
+    // 漢字の14日間スケジュール定義
     const kanjiSchedule = {
         11: "11日目：31〜40番（書き）",
         12: "12日目：21〜40番の苦手なところ（書き）",
@@ -313,14 +365,11 @@
         14: "14日目：いよいよ育成テスト本番！"
     };
 
-    const sampleData = {
+    // 初期サンプルデータ（スプレッドシート読み込み失敗時のバックアップ）
+    let questionsData = {
         11: {
             calc: [
-                {
-                    id: 0,
-                    q: "(1) 計算をしましょう: 125 × 8",
-                    answers: [{ label: "答え", ans: "1000" }]
-                }
+                { id: 0, q: "(1) 計算をしましょう: 125 × 8", answers: [{ label: "答え", ans: "1000" }] }
             ],
             science: [],
             social: [
@@ -345,7 +394,7 @@
 
     let gameState;
     try {
-        gameState = JSON.parse(localStorage.getItem('study_gamestate_v12')) || {
+        gameState = JSON.parse(localStorage.getItem('study_gamestate_v13')) || {
             completedDays: [],
             clearedStatus: {},
             savedInputs: {}
@@ -357,9 +406,81 @@
     let viewingDay = 11;
 
     window.onload = function() {
+        loadSpreadsheetQuestions(); // スプレッドシートからの読み込みを開始
         updateDayContent();
     };
 
+    // --------------------------------------------------
+    // 📥 スプレッドシート（CSV）から問題を自動取得する処理
+    // --------------------------------------------------
+    function loadSpreadsheetQuestions() {
+        if (!SPREADSHEET_CSV_URL) return;
+
+        fetch(SPREADSHEET_CSV_URL)
+            .then(response => response.text())
+            .then(csvText => {
+                parseCSVQuestions(csvText);
+                updateDayContent(); // 取得完了後に画面更新
+            })
+            .catch(err => console.log("CSV読み込みスキップ（サンプルデータを使用）:", err));
+    }
+
+    function parseCSVQuestions(csvText) {
+        const lines = csvText.split('\n');
+        if (lines.length < 2) return;
+
+        // CSV構造を解析して questionsData にロードする
+        // [日, 科目, 問題文, 画像URL, 種類, 選択肢(カンマ区切り), 正解]
+        lines.forEach((line, idx) => {
+            if (idx === 0 || !line.trim()) return;
+            const cols = line.split(',').map(c => c.trim().replace(/^"(.*)"$/, '$1'));
+            if (cols.length < 7) return;
+
+            const day = parseInt(cols[0]);
+            const subject = cols[1]; // calc, science, social
+            const qText = cols[2];
+            const img = cols[3];
+            const qType = cols[4]; // text or select
+            const options = cols[5] ? cols[5].split('|') : [];
+            const ansVal = cols[6];
+
+            if (!day || !subject) return;
+
+            if (!questionsData[day]) {
+                questionsData[day] = { calc: [], science: [], social: [] };
+            }
+            if (!questionsData[day][subject]) {
+                questionsData[day][subject] = [];
+            }
+
+            questionsData[day][subject].push({
+                id: questionsData[day][subject].length,
+                q: qText,
+                imgUrl: img,
+                type: qType,
+                options: options,
+                answers: [{ label: "答え", ans: ansVal }]
+            });
+        });
+    }
+
+    // --------------------------------------------------
+    // 📤 スプレッドシート(GAS) へのログ送信処理
+    // --------------------------------------------------
+    function sendToGoogleSheet(dataPayload) {
+        if (!GAS_WEB_APP_URL) return;
+
+        fetch(GAS_WEB_APP_URL, {
+            method: "POST",
+            mode: "no-cors",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(dataPayload)
+        })
+        .then(() => console.log("スプレッドシート送信完了:", dataPayload))
+        .catch(err => console.error("スプレッドシート送信エラー:", err));
+    }
+
+    // タブ切替（きょうの課題 / カード図鑑）
     function switchTab(tabName) {
         document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
         document.querySelectorAll('.section').forEach(sec => sec.classList.remove('active'));
@@ -374,26 +495,67 @@
         }
     }
 
+    // 科目切替（漢字 / 算数 / 理科 / 社会）
+    function switchSubject(subjectKey) {
+        document.querySelectorAll('.subject-btn').forEach(btn => btn.classList.remove('active'));
+        document.querySelectorAll('.subject-section').forEach(sec => sec.classList.remove('active'));
+
+        const targetBtn = Array.from(document.querySelectorAll('.subject-btn')).find(btn => btn.getAttribute('onclick').includes(subjectKey));
+        if (targetBtn) targetBtn.classList.add('active');
+
+        const targetSec = document.getElementById(`subject-${subjectKey}`);
+        if (targetSec) targetSec.classList.add('active');
+    }
+
     function updateDayContent() {
         document.getElementById('cycle-day-text').innerText = `学習サイクル: ${viewingDay}日目`;
         document.getElementById('kanji-instruction').innerText = kanjiSchedule[viewingDay] || "漢字の学習";
 
         if (!gameState.clearedStatus[viewingDay]) {
-            gameState.clearedStatus[viewingDay] = { kanji: false, calc: {}, science: {}, social: {} };
+            gameState.clearedStatus[viewingDay] = { kanji: null, calc: {}, science: {}, social: {} };
         }
         if (!gameState.savedInputs[viewingDay]) {
             gameState.savedInputs[viewingDay] = {};
         }
 
-        document.getElementById('kanji-check').checked = gameState.clearedStatus[viewingDay].kanji || false;
+        // 漢字の評価状態をボタンに反映
+        const kanjiStatus = gameState.clearedStatus[viewingDay].kanji;
+        const btnOk = document.getElementById('kanji-btn-ok');
+        const btnNg = document.getElementById('kanji-btn-ng');
+        btnOk.classList.remove('active');
+        btnNg.classList.remove('active');
 
-        const currentData = sampleData[viewingDay] || { calc: [], science: [], social: [] };
+        if (kanjiStatus === true) btnOk.classList.add('active');
+        if (kanjiStatus === false) btnNg.classList.add('active');
+
+        const currentData = questionsData[viewingDay] || { calc: [], science: [], social: [] };
 
         renderCategoryQuestions('calc', currentData.calc || [], document.getElementById('calc-container'));
         renderCategoryQuestions('science', currentData.science || [], document.getElementById('science-container'));
         renderCategoryQuestions('social', currentData.social || [], document.getElementById('social-container'));
 
         checkAllClearedStatus();
+    }
+
+    // 漢字の評価設定（⭕できた / ❌まちがえた）
+    function setKanjiEval(isOk) {
+        if (!gameState.clearedStatus[viewingDay]) gameState.clearedStatus[viewingDay] = {};
+        gameState.clearedStatus[viewingDay].kanji = isOk;
+
+        saveGameState();
+        updateDayContent();
+
+        // GAS送信
+        sendToGoogleSheet({
+            type: "ANSWER_SUBMIT",
+            timestamp: new Date().toISOString(),
+            day: viewingDay,
+            category: "kanji",
+            questionIndex: 0,
+            questionText: kanjiSchedule[viewingDay] || "漢字学習",
+            userAnswers: [isOk ? "できた" : "まちがえた"],
+            isCorrect: isOk
+        });
     }
 
     function renderCategoryQuestions(categoryKey, itemsArray, containerElem) {
@@ -467,7 +629,7 @@
     }
 
     function checkSubAnswers(categoryKey, qIdx) {
-        const currentData = sampleData[viewingDay] || { calc: [], science: [], social: [] };
+        const currentData = questionsData[viewingDay] || { calc: [], science: [], social: [] };
         const item = currentData[categoryKey][qIdx];
         const resElem = document.getElementById(`${categoryKey}-res-${qIdx}`);
 
@@ -509,29 +671,27 @@
     }
 
     function checkAllClearedStatus() {
-        const kanjiElem = document.getElementById('kanji-check');
-        const kanjiChecked = kanjiElem ? kanjiElem.checked : false;
-
         if (!gameState.clearedStatus[viewingDay]) gameState.clearedStatus[viewingDay] = {};
-        gameState.clearedStatus[viewingDay].kanji = kanjiChecked;
+        
+        const kanjiDone = gameState.clearedStatus[viewingDay].kanji === true;
 
-        const currentData = sampleData[viewingDay];
+        const currentData = questionsData[viewingDay];
         const status = gameState.clearedStatus[viewingDay];
 
-        let allCalcDone = currentData && currentData.calc.length > 0 ? currentData.calc.every((_, idx) => status.calc && status.calc[idx] === true) : true;
-        let allSciDone = currentData && currentData.science.length > 0 ? currentData.science.every((_, idx) => status.science && status.science[idx] === true) : true;
-        let allSocDone = currentData && currentData.social.length > 0 ? currentData.social.every((_, idx) => status.social && status.social[idx] === true) : true;
+        let allCalcDone = currentData && currentData.calc && currentData.calc.length > 0 ? currentData.calc.every((_, idx) => status.calc && status.calc[idx] === true) : true;
+        let allSciDone = currentData && currentData.science && currentData.science.length > 0 ? currentData.science.every((_, idx) => status.science && status.science[idx] === true) : true;
+        let allSocDone = currentData && currentData.social && currentData.social.length > 0 ? currentData.social.every((_, idx) => status.social && status.social[idx] === true) : true;
 
         const btn = document.getElementById('complete-btn');
 
-        if (status.kanji && allCalcDone && allSciDone && allSocDone) {
+        if (kanjiDone && allCalcDone && allSciDone && allSocDone) {
             btn.disabled = false;
             btn.style.background = "var(--success)";
             btn.innerText = "全問クリア！この日の課題を完了にする！ 🏆";
         } else {
             btn.disabled = true;
             btn.style.background = "#94a3b8";
-            btn.innerText = "すべての問題（漢字・算数・理科・社会）をクリアしてね";
+            btn.innerText = "すべての科目（漢字・算数・理科・社会）をクリアしてね";
         }
         saveGameState();
     }
@@ -603,7 +763,7 @@
     }
 
     function saveGameState() {
-        localStorage.setItem('study_gamestate_v12', JSON.stringify(gameState));
+        localStorage.setItem('study_gamestate_v13', JSON.stringify(gameState));
     }
 </script>
 
