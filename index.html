@@ -1,470 +1,873 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>day-task-app</title>
-  <style>
-    body { font-family: sans-serif; padding: 16px; background: #f5f5f5; max-width: 600px; margin: 0 auto; }
-    
-    .header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-    .collection-btn { padding: 8px 16px; background: linear-gradient(135deg, #ffc107, #ff9800); color: #fff; border: none; border-radius: 20px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.15); font-size: 14px; }
-    
-    .nav-container { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 12px; }
-    .day-btn { padding: 8px 16px; border: 1px solid #007bff; border-radius: 20px; background: #fff; color: #007bff; font-weight: bold; cursor: pointer; white-space: nowrap; }
-    .day-btn.active { background: #007bff; color: #fff; }
-    .filter-container { margin-bottom: 16px; }
-    .filter-btn { margin-right: 6px; padding: 6px 12px; border: 1px solid #6c757d; border-radius: 16px; background: #fff; color: #6c757d; font-weight: bold; cursor: pointer; }
-    .filter-btn.active { background: #6c757d; color: #fff; }
-    .task-card { border: 1px solid #ddd; border-radius: 12px; padding: 16px; margin-bottom: 20px; background: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-    .subject-tag { display: inline-block; padding: 4px 12px; border-radius: 4px; color: #fff; font-weight: bold; margin-bottom: 12px; }
-    .grid-container { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-top: 12px; }
-    .grid-btn { padding: 10px 0; font-weight: bold; border-radius: 6px; border: 1px solid #ccc; cursor: pointer; }
-    .options-container { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
-    .option-btn { padding: 6px 12px; border: 1px solid #007bff; background: #e7f1ff; color: #007bff; border-radius: 6px; cursor: pointer; font-weight: bold; }
-    
-    .reward-card { border: 2px solid #ffc107; border-radius: 12px; padding: 16px; margin-bottom: 20px; background: linear-gradient(135deg, #fffdf0 0%, #fff9e6 100%); text-align: center; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
-    .reward-badge { display: inline-block; padding: 4px 12px; background: #ffc107; color: #000; font-weight: bold; border-radius: 12px; font-size: 12px; margin-bottom: 8px; }
-    .locked-box { font-size: 48px; margin: 12px 0; background: #e9ecef; border-radius: 12px; padding: 16px; border: 2px dashed #adb5bd; }
-    .player-img-container { margin: 12px 0; }
-    .player-img { max-width: 100%; height: auto; border-radius: 12px; border: 3px solid #ffc107; box-shadow: 0 4px 10px rgba(0,0,0,0.15); }
-    .reward-title { font-size: 18px; font-weight: bold; color: #333; margin-bottom: 4px; }
-    .reward-desc { font-size: 13px; color: #666; margin: 0; }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>まいにち学習＆ワールドカードコレクション</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --bg-color: #f8fafc;
+            --card-bg: #ffffff;
+            --text-color: #1e293b;
+            --success: #22c55e;
+            --danger: #ef4444;
+        }
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 750px;
+            margin: 0 auto;
+        }
+        h1 {
+            text-align: center;
+            color: var(--primary);
+            font-size: 1.8rem;
+            margin-bottom: 5px;
+        }
+        .subtitle {
+            text-align: center;
+            color: #64748b;
+            margin-bottom: 20px;
+            font-size: 0.95rem;
+        }
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+            margin-bottom: 20px;
+        }
+        .tab-menu {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        .tab-btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            background: #e2e8f0;
+            color: #475569;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: 0.2s;
+        }
+        .tab-btn.active {
+            background: var(--primary);
+            color: white;
+        }
+        .subject-menu {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+            overflow-x: auto;
+            padding-bottom: 5px;
+        }
+        .subject-btn {
+            flex: 1;
+            min-width: 70px;
+            padding: 8px 12px;
+            border: 2px solid #cbd5e1;
+            background: white;
+            color: #475569;
+            font-weight: bold;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            text-align: center;
+            white-space: nowrap;
+            transition: 0.2s;
+        }
+        .subject-btn.active {
+            border-color: var(--primary);
+            background: #eff6ff;
+            color: var(--primary);
+        }
 
-    .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1000; justify-content: center; align-items: center; }
-    .modal-overlay.active { display: flex; }
-    .modal-content { background: #fff; width: 90%; max-width: 500px; max-height: 85vh; border-radius: 16px; padding: 20px; overflow-y: auto; box-shadow: 0 10px 25px rgba(0,0,0,0.3); position: relative; }
-    .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #eee; padding-bottom: 12px; margin-bottom: 16px; }
-    .modal-title { font-size: 18px; font-weight: bold; margin: 0; }
-    .modal-close { background: none; border: none; font-size: 24px; font-weight: bold; cursor: pointer; color: #888; }
-    .collection-grid { display: flex; flex-direction: column; gap: 16px; }
-  </style>
+        .section, .subject-section {
+            display: none;
+        }
+        .section.active, .subject-section.active {
+            display: block;
+        }
+
+        .day-info {
+            background: #eff6ff;
+            color: #1e40af;
+            padding: 12px 15px;
+            border-radius: 8px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .sub-btn {
+            background: white;
+            border: 1px solid #1e40af;
+            color: #1e40af;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: bold;
+        }
+        .sub-question-item {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 14px;
+            margin-bottom: 12px;
+        }
+        .problem-img-box {
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            padding: 10px;
+            text-align: center;
+            margin: 10px 0;
+        }
+        .problem-img-box img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 6px;
+        }
+        .sub-inputs-container {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 8px;
+            margin-bottom: 8px;
+        }
+        .sub-input-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        input[type="text"], select {
+            padding: 8px 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            font-size: 1rem;
+            box-sizing: border-box;
+        }
+        button.action-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+        button.action-btn:hover {
+            background: var(--primary-hover);
+        }
+        button.action-btn:disabled {
+            background: #94a3b8;
+            cursor: not-allowed;
+        }
+
+        .eval-btn-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 8px;
+        }
+        .eval-btn {
+            padding: 8px 16px;
+            border-radius: 6px;
+            border: 1px solid #cbd5e1;
+            background: white;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .eval-btn.ok.active {
+            background: #dcfce7;
+            border-color: var(--success);
+            color: #15803d;
+        }
+        .eval-btn.ng.active {
+            background: #fee2e2;
+            border-color: var(--danger);
+            color: #b91c1c;
+        }
+
+        .result-msg {
+            font-weight: bold;
+            margin-left: 8px;
+            display: inline-block;
+            font-size: 0.95rem;
+        }
+        .correct { color: var(--success); }
+        .incorrect { color: var(--danger); }
+
+        #modal-bg, #congrats-modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 450px;
+            max-height: 80vh;
+            overflow-y: auto;
+            text-align: center;
+        }
+        .congrats-card {
+            background: linear-gradient(135deg, #fffbe3 0%, #ffffff 100%);
+            border: 3px solid #f59e0b;
+            border-radius: 16px;
+            padding: 25px;
+            animation: popIn 0.4s ease-out;
+        }
+        @keyframes popIn {
+            0% { transform: scale(0.7); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        .card-item {
+            border: 2px solid #cbd5e1;
+            border-radius: 12px;
+            padding: 16px 12px;
+            text-align: center;
+            background: #f8fafc;
+        }
+        .card-item.unlocked {
+            border-color: #f59e0b;
+            background: linear-gradient(135deg, #fffbe3 0%, #ffffff 100%);
+            box-shadow: 0 4px 6px -1px rgba(245, 158, 11, 0.2);
+        }
+        .card-icon {
+            font-size: 2.5rem;
+            margin-bottom: 8px;
+        }
+        .card-title {
+            font-size: 0.95rem;
+            font-weight: bold;
+            color: #334155;
+        }
+        .collection-section-title {
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: var(--primary);
+            margin-top: 25px;
+            margin-bottom: 10px;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 5px;
+        }
+    </style>
 </head>
 <body>
 
-  <div class="header-bar">
-    <div style="font-weight:bold; color:#333;">📅 学習カレンダー</div>
-    <button class="collection-btn" onclick="openCollectionModal()">🏆 選手カード図鑑</button>
-  </div>
+<div class="container">
+    <h1>⚽ まいにち学習＆ワールドカードコレクション</h1>
+    <div class="subtitle">7日間チャレンジを達成して、ボーナスカードをGETしよう！</div>
 
-  <div id="day-container" class="nav-container"></div>
-  <div id="button-container" class="filter-container"></div>
-  <div id="task-container">データを読み込み中...</div>
-
-  <div id="collection-modal" class="modal-overlay" onclick="closeCollectionModal(event)">
-    <div class="modal-content" onclick="event.stopPropagation()">
-      <div class="modal-header">
-        <h2 class="modal-title">🏆 サッカー選手カード図鑑</h2>
-        <button class="modal-close" onclick="closeCollectionModal()">&times;</button>
-      </div>
-      <div id="collection-list" class="collection-grid"></div>
+    <div class="tab-menu">
+        <button class="tab-btn active" onclick="switchTab('study')">きょうの課題</button>
+        <button class="tab-btn" onclick="switchTab('collection')">カード図鑑</button>
     </div>
-  </div>
 
-  <script>
-    const SPREADSHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS5zB1_bZuI8Vk7FwuyP3OWjgRVGzpP9LZ542955Kqs8adn7ustm6FB_zUNWm9Jo2py9BYGddk1Z_Bz/pub?output=csv';
-    let allTasks = [];
-    let currentDay = null;
-    let currentSubjectFilter = 'すべて';
-
-    const BASE_DATE = new Date(2026, 8, 6);
-    const WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土'];
-
-    function dayToDateString(dayNum) {
-      const targetDate = new Date(BASE_DATE);
-      targetDate.setDate(BASE_DATE.getDate() + (Number(dayNum) - 1));
-      const m = targetDate.getMonth() + 1;
-      const d = targetDate.getDate();
-      const w = WEEKDAYS[targetDate.getDay()];
-      return `${m}/${d}(${w})`;
-    }
-
-    document.addEventListener('DOMContentLoaded', fetchData);
-
-    async function fetchData() {
-      const container = document.getElementById('task-container');
-      try {
-        let csvText = '';
-        try {
-          const res = await fetch(SPREADSHEET_URL + '&_t=' + Date.now());
-          if (res.ok) csvText = await res.text();
-        } catch (e) {
-          console.warn('Direct fetch failed, trying proxy...', e);
-        }
-
-        // 直接取得できない場合はプロキシ経由で再試行
-        if (!csvText) {
-          const proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(SPREADSHEET_URL);
-          const resProxy = await fetch(proxyUrl);
-          if (resProxy.ok) csvText = await resProxy.text();
-        }
-
-        if (!csvText) throw new Error('スプレッドシートの読み込みに失敗しました。');
-
-        allTasks = parseCSV(csvText);
-        
-        const days = [...new Set(allTasks.map(t => String(t.day)).filter(Boolean))].sort((a,b) => Number(a) - Number(b));
-        if (days.length > 0) {
-          currentDay = days[0];
-        }
-
-        renderDayButtons(days);
-        renderTasks();
-      } catch (error) {
-        console.error(error);
-        container.innerHTML = `<p style="color:red;font-weight:bold;padding:12px;background:#fff5f5;border:1px solid #ffcdd2;border-radius:8px;">
-          ⚠️ データの読み込みに失敗しました。<br>
-          <span style="font-size:12px;color:#666;">詳細: ${error.message}</span>
-        </p>`;
-      }
-    }
-
-    function parseCSVRow(text) {
-      const result = [];
-      let cell = '';
-      let inQuotes = false;
-      for (let i = 0; i < text.length; i++) {
-        const c = text[i];
-        if (c === '"') {
-          if (inQuotes && text[i + 1] === '"') { cell += '"'; i++; } 
-          else { inQuotes = !inQuotes; }
-        } else if (c === ',' && !inQuotes) {
-          result.push(cell.trim()); cell = '';
-        } else { cell += c; }
-      }
-      result.push(cell.trim());
-      return result;
-    }
-
-    function parseCSV(text) {
-      const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
-      if (lines.length <= 1) return [];
-      
-      return lines.slice(1).map(line => {
-        const cleanRow = parseCSVRow(line).map(val => val.replace(/^"|"$/g, '').trim());
-        return {
-          day: cleanRow[0] || '',
-          id: cleanRow[1] || '',
-          groupId: cleanRow[2] || '',
-          groupImage: cleanRow[3] || '',
-          subject: cleanRow[4] || '',
-          type: cleanRow[5] || '',
-          title: cleanRow[6] || '',
-          question: cleanRow[7] || '',
-          answer: cleanRow[8] || '',
-          options: cleanRow[9] || ''
-        };
-      });
-    }
-
-    function fixImagePath(path) {
-      if (!path || path === '(空欄)') return '';
-      let cleanPath = path.trim();
-      if (cleanPath.startsWith('/')) cleanPath = cleanPath.substring(1);
-      if (!cleanPath.startsWith('http') && !cleanPath.startsWith('./')) {
-        cleanPath = './' + cleanPath;
-      }
-      return cleanPath;
-    }
-
-    function normalizeText(str) {
-      if (!str) return '';
-      return str
-        .replace(/[Ａ-Ｚａ-ｚ０-９]/g, s => String.fromCharCode(s.charCodeAt(0) - 0xFEE0))
-        .replace(/\s+/g, '')
-        .trim();
-    }
-
-    function getWrongKanji() {
-      return JSON.parse(localStorage.getItem('wrong_kanji_list') || '[]');
-    }
-
-    function toggleWrongKanji(kanjiKey) {
-      let list = getWrongKanji();
-      if (list.includes(kanjiKey)) {
-        list = list.filter(k => k !== kanjiKey);
-      } else {
-        list.push(kanjiKey);
-      }
-      localStorage.setItem('wrong_kanji_list', JSON.stringify(list));
-    }
-
-    function getCompletedTasks() {
-      return JSON.parse(localStorage.getItem('completed_tasks') || '[]');
-    }
-
-    function markTaskCompleted(taskId) {
-      if (!taskId) return;
-      let completed = getCompletedTasks();
-      if (!completed.includes(taskId)) {
-        completed.push(taskId);
-        localStorage.setItem('completed_tasks', JSON.stringify(completed));
-      }
-    }
-
-    function isDayCompleted(dayNum) {
-      const dayTasks = allTasks.filter(t => String(t.day) === String(dayNum));
-      if (dayTasks.length === 0) return false;
-
-      const normalTasks = dayTasks.filter(t => t.title || t.question);
-      if (normalTasks.length === 0) return true;
-
-      const completed = getCompletedTasks();
-      return normalTasks.every(t => completed.includes(t.id));
-    }
-
-    function renderDayButtons(days) {
-      const dayContainer = document.getElementById('day-container');
-      dayContainer.innerHTML = '';
-
-      days.forEach(day => {
-        const btn = document.createElement('button');
-        btn.textContent = dayToDateString(day);
-        btn.className = `day-btn ${String(day) === String(currentDay) ? 'active' : ''}`;
-        btn.onclick = () => {
-          currentDay = String(day);
-          currentSubjectFilter = 'すべて';
-          renderDayButtons(days);
-          renderTasks();
-        };
-        dayContainer.appendChild(btn);
-      });
-    }
-
-    function renderSubjectButtons(dayTasks) {
-      const buttonContainer = document.getElementById('button-container');
-      buttonContainer.innerHTML = '';
-      
-      const subjects = ['すべて', ...new Set(dayTasks.map(t => t.subject).filter(Boolean))];
-
-      subjects.forEach(subject => {
-        const btn = document.createElement('button');
-        btn.textContent = subject;
-        btn.className = `filter-btn ${subject === currentSubjectFilter ? 'active' : ''}`;
-        btn.onclick = () => {
-          currentSubjectFilter = subject;
-          renderSubjectButtons(dayTasks);
-          renderTasks();
-        };
-        buttonContainer.appendChild(btn);
-      });
-    }
-
-    function renderRewardCard(dayNum) {
-      const weekNum = Math.floor((dayNum - 1) / 7) + 1; 
-      const dayInWeek = ((dayNum - 1) % 7) + 1;        
-      const remainingDays = 7 - dayInWeek;              
-
-      const card = document.createElement('div');
-      card.className = 'reward-card';
-
-      if (dayInWeek === 7) {
-        const completed = isDayCompleted(dayNum);
-
-        if (completed) {
-          card.style.borderColor = '#ffc107';
-          card.style.background = 'linear-gradient(135deg, #fffdf0 0%, #ffeaa7 100%)';
-          card.innerHTML = `
-            <span class="reward-badge" style="background:#dc3545;color:#fff;">🔥 第${weekNum}週 達成限定ボーナス！</span>
-            <div class="reward-title">🎉 1週間コンプリート！</div>
-            <p class="reward-desc">✨ スペシャルカードGET！</p>
-            <div class="player-img-container">
-              <img src="./images/player/week${weekNum}.jpg" alt="スペシャルカード" class="player-img">
+    <div id="study-section" class="section active">
+        <div class="card">
+            <div class="day-info">
+                <div>
+                    <span id="cycle-day-text" style="font-size: 1.1rem;">学習サイクル: --日目</span>
+                    <div id="today-date-sub" style="font-size: 0.8rem; opacity: 0.8;"></div>
+                </div>
+                <button class="sub-btn" onclick="openPastModal()">📁 ほかの日をえらぶ</button>
             </div>
-          `;
-        } else {
-          card.innerHTML = `
-            <span class="reward-badge" style="background:#dc3545;color:#fff;">🔒 7日目限定ボーナス（ロック中）</span>
-            <div class="locked-box">❓⚽❓</div>
-            <div class="reward-title">本日の学習を全クリアしてカードを解放しよう！</div>
-            <p class="reward-desc" style="margin-top:6px;font-weight:bold;color:#dc3545;">
-              今日（${dayToDateString(dayNum)}）の問題を解き終わるとスペシャルカードが解放されます！
-            </p>
-          `;
-        }
-      } else {
-        card.innerHTML = `
-          <span class="reward-badge">🔒 第${weekNum}週 達成ボーナスカード</span>
-          <div class="locked-box">❓⚽❓</div>
-          <div class="reward-title">どんなカードが出るかな？</div>
-          <p class="reward-desc" style="margin-top:6px;font-weight:bold;color:#007bff;">
-            7日目の学習達成でカード解放！ (あと ${remainingDays} 日)
-          </p>
-        `;
-      }
-      return card;
-    }
 
-    function openCollectionModal() {
-      const modal = document.getElementById('collection-modal');
-      const listContainer = document.getElementById('collection-list');
-      listContainer.innerHTML = '';
-
-      const days = [...new Set(allTasks.map(t => String(t.day)).filter(Boolean))].sort((a,b) => Number(a) - Number(b));
-      const maxDay = days.length > 0 ? Math.max(...days.map(Number)) : 28;
-      const totalWeeks = Math.ceil(maxDay / 7) || 4;
-
-      for (let w = 1; w <= totalWeeks; w++) {
-        const targetDay = w * 7;
-        const isCompleted = isDayCompleted(targetDay);
-        const cardBox = document.createElement('div');
-
-        if (isCompleted) {
-          cardBox.className = 'reward-card';
-          cardBox.style.margin = '0';
-          cardBox.innerHTML = `
-            <span class="reward-badge" style="background:#28a745;color:#fff;">✨ 第${w}週 スペシャルカード（GET済み）</span>
-            <div class="player-img-container">
-              <img src="./images/player/week${w}.jpg" alt="第${w}週のスペシャルカード" class="player-img">
+            <div class="subject-menu">
+                <button class="subject-btn active" onclick="switchSubject('kanji')">✍️ 漢字</button>
+                <button class="subject-btn" onclick="switchSubject('calc')">🔢 算数</button>
+                <button class="subject-btn" onclick="switchSubject('science')">🔬 理科</button>
+                <button class="subject-btn" onclick="switchSubject('social')">🌍 社会</button>
             </div>
-          `;
-        } else {
-          cardBox.className = 'reward-card';
-          cardBox.style.margin = '0';
-          cardBox.style.opacity = '0.7';
-          cardBox.innerHTML = `
-            <span class="reward-badge" style="background:#6c757d;color:#fff;">🔒 第${w}週 カード（未解放）</span>
-            <div class="locked-box" style="font-size:32px;padding:12px;">❓⚽❓</div>
-            <p style="font-size:12px;color:#666;margin:4px 0 0 0;">${dayToDateString(targetDay)} の全問クリアで解放されます！</p>
-          `;
-        }
-        listContainer.appendChild(cardBox);
-      }
 
-      modal.classList.add('active');
+            <!-- 1. 漢字 -->
+            <div id="subject-kanji" class="subject-section active">
+                <div class="sub-question-item" style="background:#eff6ff; border-color:#bfdbfe;">
+                    <div style="font-weight: bold; font-size: 1.05rem; margin-bottom: 4px;">✍️ 漢字（ノート手書き練習）</div>
+                    <div id="kanji-instruction" style="color: #1e40af; margin-bottom: 12px; font-weight: bold;"></div>
+                    
+                    <div id="kanji-img-container" style="display:none;" class="problem-img-box">
+                        <img id="kanji-img" src="" alt="漢字問題画像" onerror="this.onerror=null; this.parentElement.style.display='none';">
+                    </div>
+
+                    <div id="kanji-review-memo" style="display:none; background:#fef3c7; border:1px solid #f59e0b; padding:10px; border-radius:6px; margin-bottom:12px; font-size:0.9rem; color:#b45309;">
+                        <strong>🔍 復習メモ：</strong><br>
+                        <span id="kanji-review-text">なし</span>
+                    </div>
+
+                    <div style="font-size:0.9rem; color:#475569; margin-bottom:6px;">今日の漢字学習の結果：</div>
+                    <div class="eval-btn-group">
+                        <button id="kanji-btn-ok" class="eval-btn ok" onclick="setKanjiEval(true)">⭕ パーフェクト！できた</button>
+                        <button id="kanji-btn-ng" class="eval-btn ng" onclick="setKanjiEval(false)">❌ まちがえた番号がある</button>
+                    </div>
+
+                    <div id="kanji-wrong-num-box" style="display:none; margin-top:12px;">
+                        <span style="font-size:0.85rem; color:#dc2626; font-weight:bold;">まちがえた問題番号（例: 3, 7）：</span><br>
+                        <input type="text" id="kanji-wrong-input" placeholder="番号をメモ" style="width:100%; margin-top:4px;" onchange="saveKanjiWrongNumbers(this.value)">
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. 算数 -->
+            <div id="subject-calc" class="subject-section">
+                <div id="calc-container"></div>
+            </div>
+
+            <!-- 3. 理科 -->
+            <div id="subject-science" class="subject-section">
+                <div id="science-container"></div>
+            </div>
+
+            <!-- 4. 社会 -->
+            <div id="subject-social" class="subject-section">
+                <div id="social-container"></div>
+            </div>
+
+            <div style="text-align: center; margin-top: 25px;">
+                <button id="complete-btn" class="action-btn" style="padding: 14px 28px; font-size: 1.15rem;" onclick="completeToday()" disabled>全問クリアして完了！ 🏆</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="collection-section" class="section">
+        <div class="card">
+            <h2>🏆 カード図鑑（ボーナスコレクション）</h2>
+            <p style="font-size: 0.9rem; color: #64748b; margin-bottom: 15px;">7日間すべて完了すると、その週（Week）のボーナスカードが1枚ゲットできます！</p>
+            
+            <div id="card-display-area"></div>
+        </div>
+    </div>
+</div>
+
+<div id="modal-bg" onclick="closePastModal(event)">
+    <div class="modal-content" onclick="event.stopPropagation()">
+        <h3>📁 学習日をえらぶ</h3>
+        <div id="modal-day-list"></div>
+        <div style="text-align: right; margin-top: 15px;">
+            <button class="sub-btn" onclick="closePastModal()">とじる</button>
+        </div>
+    </div>
+</div>
+
+<div id="congrats-modal">
+    <div class="modal-content congrats-card">
+        <div style="font-size: 3rem; margin-bottom: 5px;" id="congrats-icon">🎉</div>
+        <h2 style="color: #d97706; margin-top: 0; font-size: 1.6rem;" id="congrats-title">ぜんぶクリア！おめでとう！</h2>
+        <p style="font-size: 1rem; color: #334155; line-height: 1.5;" id="congrats-msg">
+            今日の課題を見事にクリアしました！
+        </p>
+        <button class="action-btn" style="padding: 10px 24px; font-size: 1rem; background: #f59e0b;" onclick="closeCongratsModal()">やったー！</button>
+    </div>
+</div>
+
+<script>
+    const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzwgQ6zxzG27_0WvchBnHLGbwdHDdWM7gA-R4gUX4RdyUryZghycGXVO18V_bnFT6mC/exec"; 
+
+    // 2026/09/20 を 15日目 とする基準定義
+    const BASE_DATE = new Date("2026-09-20T00:00:00");
+    const BASE_DAY_NUM = 15;
+
+    // 各Week用スペシャルカードのリスト
+    const WEEK_CARDS = [
+        { icon: "🏆", name: "ビギナーマスター" },       // Week 1
+        { icon: "⚽", name: "レジェンドストライカー" }, // Week 2
+        { icon: "💎", name: "ダイヤモンドクラウン" },   // Week 3
+        { icon: "🔥", name: "ファイヤードラゴン" },     // Week 4
+        { icon: "🌟", name: "ギャラクシーヒーロー" },   // Week 5
+        { icon: "👑", name: "ワールドキング" }         // Week 6
+    ];
+
+    function calculateCurrentDayNumber() {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const diffTime = today.getTime() - BASE_DATE.getTime();
+        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+        return BASE_DAY_NUM + diffDays;
     }
 
-    function closeCollectionModal(e) {
-      const modal = document.getElementById('collection-modal');
-      modal.classList.remove('active');
+    let viewingDay = calculateCurrentDayNumber();
+
+    const kanjiSchedule = {
+        11: "11日目：1〜20番（書き）",
+        12: "12日目：21〜40番（書き）",
+        13: "13日目：全体復習（11日目・12日目の弱点見直し）",
+        14: "14日目：いよいよ育成テスト本番！",
+        15: "15日目：新サイクルスタート・基本復習"
+    };
+
+    let questionsData = {};
+    let gameState = {
+        completedDays: [],
+        clearedStatus: {},
+        savedInputs: {},
+        kanjiWrongNotes: {}
+    };
+
+    window.onload = function() {
+        loadDataFromGAS();
+    };
+
+    function loadDataFromGAS() {
+        if (!GAS_WEB_APP_URL) return;
+
+        fetch(GAS_WEB_APP_URL + "?action=syncLoad")
+            .then(res => res.json())
+            .then(data => {
+                if (data.gameState) {
+                    gameState = data.gameState;
+                }
+                if (data.rows && data.rows.length >= 2) {
+                    parseQuestionsData(data.rows);
+                }
+                updateDayContent();
+            })
+            .catch(err => {
+                console.error("GASデータ読み込みエラー:", err);
+                updateDayContent();
+            });
     }
 
-    function renderTasks() {
-      const container = document.getElementById('task-container');
-      container.innerHTML = '';
+    function parseQuestionsData(rows) {
+        questionsData = {};
+        rows.forEach((cols, idx) => {
+            if (idx === 0) return;
+            const day = parseInt(cols[0]); 
+            const qId = cols[1];          
+            const grpImg = cols[3];       
+            const rawSubject = cols[4];   
+            const qTitle = cols[6];       
+            const qText = cols[7];        
+            const ansVal = String(cols[8] !== undefined ? cols[8] : '').trim(); 
+            const rawOptions = cols[9];   
 
-      const dayNum = Number(currentDay) || 1;
+            if (!day || !rawSubject) return;
+            if (!questionsData[day]) questionsData[day] = { calc: [], science: [], social: [], kanji: [] };
 
-      if (currentSubjectFilter === 'すべて' || currentSubjectFilter === '漢字') {
-        container.appendChild(renderRewardCard(dayNum));
-      }
-
-      const dayTasks = allTasks.filter(t => String(t.day) === String(currentDay));
-      renderSubjectButtons(dayTasks);
-
-      const tasksToDisplay = currentSubjectFilter === 'すべて' 
-        ? dayTasks 
-        : dayTasks.filter(t => t.subject === currentSubjectFilter);
-
-      if (tasksToDisplay.length === 0) {
-        container.innerHTML += '<p>この日の該当する問題はありません。</p>';
-        return;
-      }
-
-      let currentSubject = null;
-      let currentImage = null;
-      let currentCard = null;
-
-      tasksToDisplay.forEach((task) => {
-        const isKanji = (task.subject && task.subject.includes('漢字')) || 
-                        (task.type && task.type.toLowerCase() === 'note') || 
-                        (task.id && task.id.toLowerCase().includes('kj'));
-
-        const imgPath = fixImagePath(task.groupImage);
-        const hasImage = imgPath !== '';
-
-        if (String(task.day) === '13' && isKanji) {
-          const reviewCard = document.createElement('div');
-          reviewCard.className = 'task-card';
-          reviewCard.style.borderColor = '#dc3545';
-          
-          const wrongList = getWrongKanji();
-          const displayList = wrongList.map(item => item.replace('NO-', 'No.'));
-
-          reviewCard.innerHTML = `
-            <h3 style="color:#dc3545;margin-top:0;">📝 漢字の復習 (${dayToDateString(13)})</h3>
-            ${hasImage ? `<div style="text-align:center;margin-bottom:12px;"><img src="${imgPath}" style="max-width:100%;border-radius:8px;"></div>` : ''}
-            <p style="font-weight:bold;color:#333;margin-bottom:8px;">【11日目・12日目で間違えた番号】</p>
-            <p style="font-weight:bold;color:#dc3545;font-size:16px;background:#fff5f5;padding:12px;border-radius:8px;border:1px solid #ffcdd2;">
-              ${displayList.length === 0 ? '🎉 間違えた問題はありません！バッチリです！' : displayList.join(' ,  ')}
-            </p>
-          `;
-          container.appendChild(reviewCard);
-          return;
-        }
-
-        const isSubjectChanged = task.subject !== currentSubject;
-        const isImageChanged = hasImage && imgPath !== currentImage;
-
-        if (!currentCard || isSubjectChanged || isImageChanged || isKanji) {
-          currentCard = document.createElement('div');
-          currentCard.className = 'task-card';
-
-          if (task.subject) {
-            let tagColor = '#6c757d';
-            if (isKanji) tagColor = '#28a745';
-            else if (task.subject === '算数') tagColor = '#007bff';
-            else if (task.subject === '理科') tagColor = '#17a2b8';
-            else if (task.subject === '社会') tagColor = '#ff8c00';
-
-            const subjectTag = document.createElement('div');
-            subjectTag.innerHTML = `<span class="subject-tag" style="background-color:${tagColor}">${task.subject} (${dayToDateString(task.day)})</span>`;
-            currentCard.appendChild(subjectTag);
-          }
-
-          if (hasImage) {
-            const imgBox = document.createElement('div');
-            imgBox.style.cssText = 'text-align:center;margin-bottom:16px;';
-            imgBox.innerHTML = `<img src="${imgPath}" style="max-width:100%;border-radius:8px;border:1px solid #eee;">`;
-            currentCard.appendChild(imgBox);
-          }
-
-          container.appendChild(currentCard);
-          currentSubject = task.subject;
-          currentImage = hasImage ? imgPath : null;
-        }
-
-        if (isKanji) {
-          if (task.question) {
-            const qTitle = document.createElement('p');
-            qTitle.style.cssText = 'font-weight:bold;margin:0 0 8px 0;';
-            qTitle.textContent = task.question;
-            currentCard.appendChild(qTitle);
-          }
-
-          if (String(task.day) === '11' || String(task.day) === '12') {
-            const grid = document.createElement('div');
-            grid.className = 'grid-container';
-            const wrongList = getWrongKanji();
-
-            const startNum = String(task.day) === '11' ? 1 : 21;
-            const endNum = String(task.day) === '11' ? 20 : 40;
-
-            for (let i = startNum; i <= endNum; i++) {
-              const itemKey = `NO-${i}`;
-              const isWrong = wrongList.includes(itemKey);
-              const btn = document.createElement('button');
-              btn.className = 'grid-btn';
-              btn.textContent = i;
-              btn.style.backgroundColor = isWrong ? '#dc3545' : '#f8f9fa';
-              btn.style.color = isWrong ? '#ffffff' : '#333333';
-
-              btn.onclick = () => {
-                toggleWrongKanji(itemKey);
-                const nowWrong = getWrongKanji().includes(itemKey);
-                btn.style.backgroundColor = nowWrong ? '#dc3545' : '#f8f9fa';
-                btn.style.color = nowWrong ? '#ffffff' : '#333333';
-              };
-              grid.appendChild(btn);
+            let subKey = '';
+            if (rawSubject === '算数') subKey = 'calc';
+            else if (rawSubject === '社会') subKey = 'social';
+            else if (rawSubject === '理科') subKey = 'science';
+            else if (rawSubject === '漢字') {
+                if (grpImg) questionsData[day].kanji.push({ imgUrl: grpImg, qText: qText });
+                return;
             }
-            currentCard.appendChild(grid);
-          }
-          return;
+
+            if (!questionsData[day][subKey]) questionsData[day][subKey] = [];
+
+            let optionsArray = [];
+            if (rawOptions) {
+                optionsArray = String(rawOptions).split(/[,、|]/).map(o => o.trim()).filter(Boolean);
+            }
+
+            let fullQ = qTitle ? `${qTitle} ${qText}` : qText;
+            questionsData[day][subKey].push({
+                id: questionsData[day][subKey].length,
+                q: fullQ,
+                imgUrl: grpImg || '',
+                type: optionsArray.length > 0 ? "select" : "text",
+                options: optionsArray,
+                answers: [{ label: "答え", ans: ansVal }]
+            });
+        });
+    }
+
+    function syncSaveToGAS() {
+        if (!GAS_WEB_APP_URL) return;
+        fetch(GAS_WEB_APP_URL, {
+            method: "POST",
+            mode: "no-cors",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                action: "syncSave",
+                gameState: gameState
+            })
+        }).catch(err => console.error("データ保存エラー:", err));
+    }
+
+    function switchTab(tabName) {
+        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+        document.querySelectorAll('.section').forEach(sec => sec.classList.remove('active'));
+
+        if(tabName === 'study') {
+            document.querySelectorAll('.tab-btn')[0].classList.add('active');
+            document.getElementById('study-section').classList.add('active');
+        } else if(tabName === 'collection') {
+            document.querySelectorAll('.tab-btn')[1].classList.add('active');
+            document.getElementById('collection-section').classList.add('active');
+            renderCollection();
+        }
+    }
+
+    function switchSubject(subjectKey) {
+        document.querySelectorAll('.subject-btn').forEach(btn => btn.classList.remove('active'));
+        document.querySelectorAll('.subject-section').forEach(sec => sec.classList.remove('active'));
+
+        const targetBtn = Array.from(document.querySelectorAll('.subject-btn')).find(btn => btn.getAttribute('onclick').includes(subjectKey));
+        if (targetBtn) targetBtn.classList.add('active');
+
+        const targetSec = document.getElementById(`subject-${subjectKey}`);
+        if (targetSec) targetSec.classList.add('active');
+    }
+
+    function updateDayContent() {
+        document.getElementById('cycle-day-text').innerText = `学習サイクル: ${viewingDay}日目`;
+        
+        const now = new Date();
+        document.getElementById('today-date-sub').innerText = `（本日: ${now.getFullYear()}/${now.getMonth()+1}/${now.getDate()}）`;
+
+        const defaultInstruction = kanjiSchedule[viewingDay] || `${viewingDay}日目：漢字の学習（ノートに書いて練習）`;
+        document.getElementById('kanji-instruction').innerText = defaultInstruction;
+
+        const kanjiImgBox = document.getElementById('kanji-img-container');
+        const kanjiImgElem = document.getElementById('kanji-img');
+        const currentKanjiData = questionsData[viewingDay] && questionsData[viewingDay].kanji ? questionsData[viewingDay].kanji : [];
+
+        if (currentKanjiData.length > 0 && currentKanjiData[0].imgUrl) {
+            kanjiImgElem.src = currentKanjiData[0].imgUrl;
+            kanjiImgBox.style.display = 'block';
+        } else {
+            kanjiImgBox.style.display = 'none';
         }
 
-        if (task.title || task.question) {
-          const itemBox = document.createElement('div');
-          itemBox.style.cssText = 'padding:10px 0; border-top:1px dashed #eee;';
+        if (!gameState.clearedStatus[viewingDay]) {
+            gameState.clearedStatus[viewingDay] = { kanji: null, calc: {}, science: {}, social: {} };
+        }
+        if (!gameState.savedInputs[viewingDay]) gameState.savedInputs[viewingDay] = {};
+        if (!gameState.kanjiWrongNotes) gameState.kanjiWrongNotes = {};
 
-          let optionsHtml = '';
-          if (task
+        const kanjiStatus = gameState.clearedStatus[viewingDay].kanji;
+        const btnOk = document.getElementById('kanji-btn-ok');
+        const btnNg = document.getElementById('kanji-btn-ng');
+        const wrongBox = document.getElementById('kanji-wrong-num-box');
+        const wrongInput = document.getElementById('kanji-wrong-input');
+        const reviewMemo = document.getElementById('kanji-review-memo');
+
+        btnOk.classList.remove('active');
+        btnNg.classList.remove('active');
+        wrongBox.style.display = 'none';
+
+        if (kanjiStatus === true) btnOk.classList.add('active');
+        if (kanjiStatus === false) {
+            btnNg.classList.add('active');
+            wrongBox.style.display = 'block';
+            wrongInput.value = gameState.kanjiWrongNotes[viewingDay] || '';
+        }
+
+        if (viewingDay === 13) {
+            reviewMemo.style.display = 'block';
+            const memo11 = gameState.kanjiWrongNotes[11] ? `【11日目】${gameState.kanjiWrongNotes[11]}` : '';
+            const memo12 = gameState.kanjiWrongNotes[12] ? `【12日目】${gameState.kanjiWrongNotes[12]}` : '';
+            const combinedMemo = [memo11, memo12].filter(Boolean).join(' / ');
+            document.getElementById('kanji-review-text').innerText = combinedMemo || "復習が必要な番号メモはありません（全問正解！）";
+        } else {
+            reviewMemo.style.display = 'none';
+        }
+
+        const currentData = questionsData[viewingDay] || { calc: [], science: [], social: [] };
+
+        renderCategoryQuestions('calc', currentData.calc || [], document.getElementById('calc-container'));
+        renderCategoryQuestions('science', currentData.science || [], document.getElementById('science-container'));
+        renderCategoryQuestions('social', currentData.social || [], document.getElementById('social-container'));
+
+        checkAllClearedStatus();
+    }
+
+    function setKanjiEval(isOk) {
+        if (!gameState.clearedStatus[viewingDay]) {
+            gameState.clearedStatus[viewingDay] = { kanji: null, calc: {}, science: {}, social: {} };
+        }
+        gameState.clearedStatus[viewingDay].kanji = isOk;
+        syncSaveToGAS();
+        updateDayContent();
+    }
+
+    function saveKanjiWrongNumbers(val) {
+        if (!gameState.kanjiWrongNotes) gameState.kanjiWrongNotes = {};
+        gameState.kanjiWrongNotes[viewingDay] = val;
+        syncSaveToGAS();
+    }
+
+    function renderCategoryQuestions(subKey, list, container) {
+        container.innerHTML = '';
+        if (!list || list.length === 0) {
+            container.innerHTML = '<div class="sub-question-item">この教科の課題はありません。</div>';
+            return;
+        }
+
+        list.forEach((qObj) => {
+            const itemDiv = document.createElement('div');
+            itemDiv.className = 'sub-question-item';
+
+            let imgHtml = qObj.imgUrl ? `<div class="problem-img-box"><img src="${qObj.imgUrl}" alt="問題画像"></div>` : '';
+            
+            const savedVal = (gameState.savedInputs[viewingDay] && gameState.savedInputs[viewingDay][`${subKey}_${qObj.id}`]) || '';
+            const isCleared = gameState.clearedStatus[viewingDay] && gameState.clearedStatus[viewingDay][subKey] && gameState.clearedStatus[viewingDay][subKey][qObj.id];
+
+            let inputHtml = '';
+            if (qObj.type === 'select') {
+                let optionsHtml = qObj.options.map(opt => `<option value="${opt}" ${savedVal === opt ? 'selected' : ''}>${opt}</option>`).join('');
+                inputHtml = `
+                    <select id="input-${subKey}-${qObj.id}" onchange="saveInputVal('${subKey}', ${qObj.id}, this.value)">
+                        <option value="">-- えらんでね --</option>
+                        ${optionsHtml}
+                    </select>`;
+            } else {
+                inputHtml = `<input type="text" id="input-${subKey}-${qObj.id}" value="${savedVal}" placeholder="答えを入力" onchange="saveInputVal('${subKey}', ${qObj.id}, this.value)">`;
+            }
+
+            let msgHtml = '';
+            if (isCleared !== undefined) {
+                msgHtml = isCleared 
+                    ? `<span class="result-msg correct">⭕ 正解！</span>` 
+                    : `<span class="result-msg incorrect">❌ おしい！もういちど試そう</span>`;
+            }
+
+            itemDiv.innerHTML = `
+                <div style="font-weight:bold; margin-bottom:8px;">問 ${qObj.id + 1}. ${qObj.q}</div>
+                ${imgHtml}
+                <div class="sub-inputs-container">
+                    <div class="sub-input-row">
+                        ${inputHtml}
+                        <button class="action-btn" onclick="checkSingleAnswer('${subKey}', ${qObj.id})">判定</button>
+                        ${msgHtml}
+                    </div>
+                </div>
+            `;
+            container.appendChild(itemDiv);
+        });
+    }
+
+    function saveInputVal(subKey, qId, val) {
+        if (!gameState.savedInputs[viewingDay]) gameState.savedInputs[viewingDay] = {};
+        gameState.savedInputs[viewingDay][`${subKey}_${qId}`] = val;
+        syncSaveToGAS();
+    }
+
+    function checkSingleAnswer(subKey, qId) {
+        const qList = questionsData[viewingDay][subKey];
+        if (!qList) return;
+        const qObj = qList.find(item => item.id === qId);
+        if (!qObj) return;
+
+        const inputElem = document.getElementById(`input-${subKey}-${qId}`);
+        if (!inputElem) return;
+
+        const userAns = inputElem.value.trim();
+        const correctAns = qObj.answers[0].ans;
+
+        const isCorrect = userAns !== '' && userAns.toLowerCase() === correctAns.toLowerCase();
+
+        if (!gameState.clearedStatus[viewingDay][subKey]) {
+            gameState.clearedStatus[viewingDay][subKey] = {};
+        }
+        gameState.clearedStatus[viewingDay][subKey][qId] = isCorrect;
+        syncSaveToGAS();
+
+        updateDayContent();
+    }
+
+    function checkAllClearedStatus() {
+        const dayStatus = gameState.clearedStatus[viewingDay];
+        if (!dayStatus) return;
+
+        let allOk = true;
+
+        if (dayStatus.kanji === null) allOk = false;
+
+        ['calc', 'science', 'social'].forEach(subKey => {
+            const currentList = (questionsData[viewingDay] && questionsData[viewingDay][subKey]) || [];
+            if (currentList.length > 0) {
+                currentList.forEach(q => {
+                    if (!dayStatus[subKey] || !dayStatus[subKey][q.id]) {
+                        allOk = false;
+                    }
+                });
+            }
+        });
+
+        const completeBtn = document.getElementById('complete-btn');
+        completeBtn.disabled = !allOk;
+    }
+
+    // 7日間すべて完了したか確認する判定
+    function isWeekFullyCleared(weekNum) {
+        const start = (weekNum - 1) * 7 + 1;
+        const end = weekNum * 7;
+        for (let d = start; d <= end; d++) {
+            if (!gameState.completedDays.includes(d)) return false;
+        }
+        return true;
+    }
+
+    function completeToday() {
+        if (!gameState.completedDays.includes(viewingDay)) {
+            gameState.completedDays.push(viewingDay);
+            syncSaveToGAS();
+        }
+
+        const currentWeekNum = Math.ceil(viewingDay / 7);
+        const weekCleared = isWeekFullyCleared(currentWeekNum);
+
+        const modalTitle = document.getElementById('congrats-title');
+        const modalMsg = document.getElementById('congrats-msg');
+        const modalIcon = document.getElementById('congrats-icon');
+
+        if (weekCleared) {
+            const cardInfo = WEEK_CARDS[(currentWeekNum - 1) % WEEK_CARDS.length];
+            modalIcon.innerText = "🏆🎁🎉";
+            modalTitle.innerText = `Week ${currentWeekNum} パーフェクト達成！`;
+            modalMsg.innerHTML = `7日間の課題をすべてクリアしました！<br>ボーナスカード <strong>「${cardInfo.name} ${cardInfo.icon}」</strong> をGETしました！`;
+        } else {
+            modalIcon.innerText = "🎉";
+            modalTitle.innerText = "今日の課題クリア！";
+            modalMsg.innerText = "見事に今日のすべての問題を解き明かしました！この調子で7日間達成をめざそう！";
+        }
+
+        document.getElementById('congrats-modal').style.display = 'flex';
+    }
+
+    function closeCongratsModal() {
+        document.getElementById('congrats-modal').style.display = 'none';
+    }
+
+    function openPastModal() {
+        const listContainer = document.getElementById('modal-day-list');
+        listContainer.innerHTML = '';
+
+        const currentDayNum = calculateCurrentDayNumber();
+        const startDay = Math.max(1, currentDayNum - 5);
+        const endDay = currentDayNum + 2;
+
+        for (let d = startDay; d <= endDay; d++) {
+            const btn = document.createElement('button');
+            btn.className = 'action-btn';
+            btn.style.cssText = 'width: 100%; margin-bottom: 8px; text-align: left; padding: 10px;';
+            const isDone = gameState.completedDays.includes(d) ? '✅ ' : '⏳ ';
+            const isTodayMark = (d === currentDayNum) ? ' (きょう)' : '';
+            btn.innerText = `${isDone}${d}日目の学習${isTodayMark}`;
+            btn.onclick = () => {
+                viewingDay = d;
+                updateDayContent();
+                closePastModal();
+            };
+            listContainer.appendChild(btn);
+        }
+
+        document.getElementById('modal-bg').style.display = 'flex';
+    }
+
+    function closePastModal(e) {
+        document.getElementById('modal-bg').style.display = 'none';
+    }
+
+    // カード図鑑描画（7日完了ごとに1枚ゲット）
+    function renderCollection() {
+        const container = document.getElementById('card-display-area');
+        container.innerHTML = '';
+
+        const currentDayNum = calculateCurrentDayNumber();
+        const currentWeekNum = Math.ceil(currentDayNum / 7);
+
+        // 1. 今週チャレンジ中のカード（1枚）
+        const thisWeekHeader = document.createElement('div');
+        thisWeekHeader.className = 'collection-section-title';
+        thisWeekHeader.innerText = `🎯 今週（Week ${currentWeekNum}）のチャレンジカード`;
+        container.appendChild(thisWeekHeader);
+
+        const thisWeekGrid = document.createElement('div');
+        thisWeekGrid.className = 'card-grid';
+
+        const isWeekUnlocked = isWeekFullyCleared(currentWeekNum);
+        const cardInfo = WEEK_CARDS[(currentWeekNum - 1) % WEEK_CARDS.length];
+
+        // 7日間のうち何日クリアしたかカウント
+        let clearedCount = 0;
+        const weekStart = (currentWeekNum - 1) * 7 + 1;
+        const weekEnd = currentWeekNum * 7;
+        for (let d = weekStart; d <= weekEnd; d++) {
+            if (gameState.completedDays.includes(d)) clearedCount++;
+        }
+
+        const currentCardDiv = document.createElement('div');
+        currentCardDiv.className = `card-item ${isWeekUnlocked ? 'unlocked' : ''}`;
+        currentCardDiv.innerHTML = `
+            <div class="card-icon">${isWeekUnlocked ? cardInfo.icon : '🔒'}</div>
+            <div class="card-title">${isWeekUnlocked ? cardInfo.name : `Week ${currentWeekNum} カード`}</div>
+            <div style="font-size:0.75rem; color:${isWeekUnlocked ? '#d97706' : '#64748b'}; margin-top:4px;">
+                ${isWeekUnlocked ? 'GET済み！' : `進捗: ${clearedCount} / 7 日クリア`}
+            </div>
+        `;
+        thisWeekGrid.appendChild(currentCardDiv);
+        container.appendChild(thisWeekGrid);
+
+        // 2. 過去にゲットしたカード一覧（バックナンバー）
+        const historyHeader = document.createElement('div');
+        historyHeader.className = 'collection-section-title';
+        historyHeader.innerText = `📦 過去にゲットしたカード一覧`;
+        container.appendChild(historyHeader);
+
+        const historyGrid = document.createElement('div');
+        historyGrid.className = 'card-grid';
+
+        let unlockedCount = 0;
+        // 過去のWeekをチェック
+        for (let w = 1; w <= currentWeekNum; w++) {
+            if (isWeekFullyCleared(w)) {
+                unlockedCount++;
+                const pastCard = WEEK_CARDS[(w - 1) % WEEK_CARDS.length];
+                const endDay = w * 7;
+
+                const cardDiv = document.createElement('div');
+                cardDiv.className = 'card-item unlocked';
+                cardDiv.innerHTML = `
+                    <div class="card-icon">${pastCard.icon}</div>
+                    <div class="card-title">${pastCard.name}</div>
+                    <div style="font-size:0.7rem; color:#d97706; margin-top:2px;">Week ${w}（${endDay}日目達成）</div>
+                `;
+                historyGrid.appendChild(cardDiv);
+            }
+        }
+
+        if (unlockedCount === 0) {
+            const emptyMsg = document.createElement('p');
+            emptyMsg.style.cssText = "color:#64748b; font-size:0.9rem;";
+            emptyMsg.innerText = "まだ獲得したカードはありません。7日間（1週間）の課題をすべてクリアしてカードをゲットしよう！";
+            container.appendChild(emptyMsg);
+        } else {
+            container.appendChild(historyGrid);
+        }
+    }
+</script>
+</body>
+</html>
