@@ -600,7 +600,7 @@
             const memo11 = gameState.kanjiWrongNotes[11] ? `【11日目】${gameState.kanjiWrongNotes[11]}` : '';
             const memo12 = gameState.kanjiWrongNotes[12] ? `【12日目】${gameState.kanjiWrongNotes[12]}` : '';
             const combinedMemo = [memo11, memo12].filter(Boolean).join(' / ');
-            document.getElementById('kanji-review-text').innerText = combinedMemo || "復習が必要な番号メモはありません（全問正解！）";
+            document.getElementById('kanji-review-text').innerText = combinedMemo || "復習が必要な問題はありません（全問正解！）";
         } else {
             reviewMemo.style.display = 'none';
         }
@@ -654,7 +654,7 @@
                         ${optionsHtml}
                     </select>`;
             } else {
-                inputHtml = `<input type="text" id="input-${subKey}-${qObj.id}" value="${savedVal}" placeholder="答えを入力" onchange="saveInputVal('${subKey}', ${qObj.id}, this.value)">`;
+                inputHtml = `<input type="text" id="input-${subKey}-${qObj.id}" value="${savedVal}" placeholder="答えを入力" onchange="saveInputVal('${subKey}', ${qObj.id}, this.value)" onkeydown="if(event.key === 'Enter'){ saveInputVal('${subKey}', ${qObj.id}, this.value); checkSingleAnswer('${subKey}', ${qObj.id}); }">`;
             }
 
             let msgHtml = '';
@@ -880,7 +880,7 @@
         if (unlockedCount === 0) {
             const emptyMsg = document.createElement('p');
             emptyMsg.style.cssText = "color:#64748b; font-size:0.9rem;";
-            emptyMsg.innerText = "まだ獲得したカードはありません。課題をクリアしよう！";
+            emptyMsg.innerText = "まだ獲得したカードはありません。14日目（Week 1）、21日目（Week 2）を目指して課題をクリアしよう！";
             container.appendChild(emptyMsg);
         } else {
             container.appendChild(historyGrid);
