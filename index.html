@@ -396,7 +396,6 @@
 </div>
 
 <script>
-    // 教えていただいたスプレッドシートのWeb公開CSV URL
     const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vS5zB1_bZuI8Vk7FwuyP3OWjgRVGzpP9LZ542955Kqs8adn7ustm6FB_zUNWm9Jo2py9BYGddk1Z_Bz/pub?output=csv"; 
 
     // 2026/09/20 を 15日目 とする基準定義
@@ -457,6 +456,26 @@
             });
     }
 
+    // CSVパーサー関数（カンマ区切りの文字列分解処理）
+    function parseCSVLine(line) {
+        const result = [];
+        let cur = '';
+        let inQuotes = false;
+        for (let i = 0; i < line.length; i++) {
+            const c = line[i];
+            if (c === '"') {
+                inQuotes = !inQuotes;
+            } else if (c === ',' && !inQuotes) {
+                result.push(cur.trim());
+                cur = '';
+            } else {
+                cur += c;
+            }
+        }
+        result.push(cur.trim());
+        return result.map(s => s.replace(/^"|"$/g, '').trim());
+    }
+
     function parseCSV(text) {
         questionsData = {};
         const lines = text.split(/\r\n|\n/);
@@ -464,17 +483,19 @@
         for (let i = 1; i < lines.length; i++) {
             if (!lines[i].trim()) continue;
             
-            const cols = lines[i].match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || lines[i].split(',');
-            const cleanCols = cols.map(c => c.replace(/^"|"$/g, '').trim());
+            const cleanCols = parseCSVLine(lines[i]);
 
+            // 画像のスプレッドシート列に対応
+            // A: day(0), B: id(1), C: group(2), D: groupImage(3), E: 空欄(4), F: subject(5)
+            // G: type(6), H: title(7), I: question(8), J: answer(9), K: options(10)
             const day = parseInt(cleanCols[0]); 
             const qId = cleanCols[1];          
             const grpImg = cleanCols[3];       
-            const rawSubject = cleanCols[4];   
-            const qTitle = cleanCols[6];       
-            const qText = cleanCols[7];        
-            const ansVal = cleanCols[8] !== undefined ? cleanCols[8] : ''; 
-            const rawOptions = cleanCols[9];   
+            const rawSubject = cleanCols[5];   
+            const qTitle = cleanCols[7];       
+            const qText = cleanCols[8];        
+            const ansVal = cleanCols[9] !== undefined ? cleanCols[9] : ''; 
+            const rawOptions = cleanCols[10];   
 
             if (isNaN(day) || !rawSubject) continue;
             if (!questionsData[day]) questionsData[day] = { calc: [], science: [], social: [], kanji: [] };
@@ -712,11 +733,10 @@
         completeBtn.disabled = !allOk;
     }
 
-    // 14日目＝Week 1, 21日目＝Week 2 のクリア判定
     function isWeekFullyCleared(weekNum) {
         if (weekNum <= 0) return false;
-        const end = (weekNum + 1) * 7;  // weekNum=1 のとき 14日目
-        const start = end - 6;          // weekNum=1 のとき 8日目
+        const end = (weekNum + 1) * 7;
+        const start = end - 6;
         for (let d = start; d <= end; d++) {
             if (!gameState.completedDays.includes(d)) return false;
         }
@@ -724,7 +744,7 @@
     }
 
     function getWeekNumFromDay(day) {
-        return Math.floor(day / 7) - 1; // 14日目 -> Week 1, 21日目 -> Week 2
+        return Math.floor(day / 7) - 1;
     }
 
     function completeToday() {
