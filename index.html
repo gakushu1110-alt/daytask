@@ -266,6 +266,10 @@
         .card-icon {
             font-size: 2.5rem;
             margin-bottom: 8px;
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
         .card-title {
             font-size: 0.95rem;
@@ -363,7 +367,7 @@
     <div id="collection-section" class="section">
         <div class="card">
             <h2>🏆 カード図鑑（ボーナスコレクション）</h2>
-            <p style="font-size: 0.9rem; color: #64748b; margin-bottom: 15px;">7日間すべて完了すると、その週（Week）のボーナスカードが1枚ゲットできます！</p>
+            <p style="font-size: 0.9rem; color: #64748b; margin-bottom: 15px;">7日間すべて完了すると、その週のボーナスカード（week1.jpg等）がゲットできます！</p>
             
             <div id="card-display-area"></div>
         </div>
@@ -392,21 +396,12 @@
 </div>
 
 <script>
-    const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzwgQ6zxzG27_0WvchBnHLGbwdHDdWM7gA-R4gUX4RdyUryZghycGXVO18V_bnFT6mC/exec"; 
+    // 教えていただいたスプレッドシートのWeb公開CSV URL
+    const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vS5zB1_bZuI8Vk7FwuyP3OWjgRVGzpP9LZ542955Kqs8adn7ustm6FB_zUNWm9Jo2py9BYGddk1Z_Bz/pub?output=csv"; 
 
     // 2026/09/20 を 15日目 とする基準定義
     const BASE_DATE = new Date("2026-09-20T00:00:00");
     const BASE_DAY_NUM = 15;
-
-    // 各Week用スペシャルカードのリスト
-    const WEEK_CARDS = [
-        { icon: "🏆", name: "ビギナーマスター" },       // Week 1
-        { icon: "⚽", name: "レジェンドストライカー" }, // Week 2
-        { icon: "💎", name: "ダイヤモンドクラウン" },   // Week 3
-        { icon: "🔥", name: "ファイヤードラゴン" },     // Week 4
-        { icon: "🌟", name: "ギャラクシーヒーロー" },   // Week 5
-        { icon: "👑", name: "ワールドキング" }         // Week 6
-    ];
 
     function calculateCurrentDayNumber() {
         const today = new Date();
@@ -435,43 +430,53 @@
     };
 
     window.onload = function() {
-        loadDataFromGAS();
+        loadLocalStorageData();
+        loadCSVData();
     };
 
-    function loadDataFromGAS() {
-        if (!GAS_WEB_APP_URL) return;
+    function loadLocalStorageData() {
+        const saved = localStorage.getItem("study_game_state");
+        if (saved) {
+            try { gameState = JSON.parse(saved); } catch(e){}
+        }
+    }
 
-        fetch(GAS_WEB_APP_URL + "?action=syncLoad")
-            .then(res => res.json())
-            .then(data => {
-                if (data.gameState) {
-                    gameState = data.gameState;
-                }
-                if (data.rows && data.rows.length >= 2) {
-                    parseQuestionsData(data.rows);
-                }
+    function saveLocalStorageData() {
+        localStorage.setItem("study_game_state", JSON.stringify(gameState));
+    }
+
+    function loadCSVData() {
+        fetch(CSV_URL)
+            .then(res => res.text())
+            .then(csvText => {
+                parseCSV(csvText);
                 updateDayContent();
             })
             .catch(err => {
-                console.error("GASデータ読み込みエラー:", err);
-                updateDayContent();
+                console.error("CSVデータの取得に失敗しました:", err);
             });
     }
 
-    function parseQuestionsData(rows) {
+    function parseCSV(text) {
         questionsData = {};
-        rows.forEach((cols, idx) => {
-            if (idx === 0) return;
-            const day = parseInt(cols[0]); 
-            const qId = cols[1];          
-            const grpImg = cols[3];       
-            const rawSubject = cols[4];   
-            const qTitle = cols[6];       
-            const qText = cols[7];        
-            const ansVal = String(cols[8] !== undefined ? cols[8] : '').trim(); 
-            const rawOptions = cols[9];   
+        const lines = text.split(/\r\n|\n/);
+        
+        for (let i = 1; i < lines.length; i++) {
+            if (!lines[i].trim()) continue;
+            
+            const cols = lines[i].match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || lines[i].split(',');
+            const cleanCols = cols.map(c => c.replace(/^"|"$/g, '').trim());
 
-            if (!day || !rawSubject) return;
+            const day = parseInt(cleanCols[0]); 
+            const qId = cleanCols[1];          
+            const grpImg = cleanCols[3];       
+            const rawSubject = cleanCols[4];   
+            const qTitle = cleanCols[6];       
+            const qText = cleanCols[7];        
+            const ansVal = cleanCols[8] !== undefined ? cleanCols[8] : ''; 
+            const rawOptions = cleanCols[9];   
+
+            if (isNaN(day) || !rawSubject) continue;
             if (!questionsData[day]) questionsData[day] = { calc: [], science: [], social: [], kanji: [] };
 
             let subKey = '';
@@ -480,14 +485,14 @@
             else if (rawSubject === '理科') subKey = 'science';
             else if (rawSubject === '漢字') {
                 if (grpImg) questionsData[day].kanji.push({ imgUrl: grpImg, qText: qText });
-                return;
+                continue;
             }
 
             if (!questionsData[day][subKey]) questionsData[day][subKey] = [];
 
             let optionsArray = [];
             if (rawOptions) {
-                optionsArray = String(rawOptions).split(/[,、|]/).map(o => o.trim()).filter(Boolean);
+                optionsArray = rawOptions.split(/[,、|]/).map(o => o.trim()).filter(Boolean);
             }
 
             let fullQ = qTitle ? `${qTitle} ${qText}` : qText;
@@ -499,20 +504,7 @@
                 options: optionsArray,
                 answers: [{ label: "答え", ans: ansVal }]
             });
-        });
-    }
-
-    function syncSaveToGAS() {
-        if (!GAS_WEB_APP_URL) return;
-        fetch(GAS_WEB_APP_URL, {
-            method: "POST",
-            mode: "no-cors",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                action: "syncSave",
-                gameState: gameState
-            })
-        }).catch(err => console.error("データ保存エラー:", err));
+        }
     }
 
     function switchTab(tabName) {
@@ -608,14 +600,14 @@
             gameState.clearedStatus[viewingDay] = { kanji: null, calc: {}, science: {}, social: {} };
         }
         gameState.clearedStatus[viewingDay].kanji = isOk;
-        syncSaveToGAS();
+        saveLocalStorageData();
         updateDayContent();
     }
 
     function saveKanjiWrongNumbers(val) {
         if (!gameState.kanjiWrongNotes) gameState.kanjiWrongNotes = {};
         gameState.kanjiWrongNotes[viewingDay] = val;
-        syncSaveToGAS();
+        saveLocalStorageData();
     }
 
     function renderCategoryQuestions(subKey, list, container) {
@@ -671,7 +663,7 @@
     function saveInputVal(subKey, qId, val) {
         if (!gameState.savedInputs[viewingDay]) gameState.savedInputs[viewingDay] = {};
         gameState.savedInputs[viewingDay][`${subKey}_${qId}`] = val;
-        syncSaveToGAS();
+        saveLocalStorageData();
     }
 
     function checkSingleAnswer(subKey, qId) {
@@ -692,7 +684,7 @@
             gameState.clearedStatus[viewingDay][subKey] = {};
         }
         gameState.clearedStatus[viewingDay][subKey][qId] = isCorrect;
-        syncSaveToGAS();
+        saveLocalStorageData();
 
         updateDayContent();
     }
@@ -720,34 +712,39 @@
         completeBtn.disabled = !allOk;
     }
 
-    // 7日間すべて完了したか確認する判定
+    // 14日目＝Week 1, 21日目＝Week 2 のクリア判定
     function isWeekFullyCleared(weekNum) {
-        const start = (weekNum - 1) * 7 + 1;
-        const end = weekNum * 7;
+        if (weekNum <= 0) return false;
+        const end = (weekNum + 1) * 7;  // weekNum=1 のとき 14日目
+        const start = end - 6;          // weekNum=1 のとき 8日目
         for (let d = start; d <= end; d++) {
             if (!gameState.completedDays.includes(d)) return false;
         }
         return true;
     }
 
+    function getWeekNumFromDay(day) {
+        return Math.floor(day / 7) - 1; // 14日目 -> Week 1, 21日目 -> Week 2
+    }
+
     function completeToday() {
         if (!gameState.completedDays.includes(viewingDay)) {
             gameState.completedDays.push(viewingDay);
-            syncSaveToGAS();
+            saveLocalStorageData();
         }
 
-        const currentWeekNum = Math.ceil(viewingDay / 7);
+        const currentWeekNum = getWeekNumFromDay(viewingDay);
         const weekCleared = isWeekFullyCleared(currentWeekNum);
 
         const modalTitle = document.getElementById('congrats-title');
         const modalMsg = document.getElementById('congrats-msg');
         const modalIcon = document.getElementById('congrats-icon');
 
-        if (weekCleared) {
-            const cardInfo = WEEK_CARDS[(currentWeekNum - 1) % WEEK_CARDS.length];
-            modalIcon.innerText = "🏆🎁🎉";
+        if (currentWeekNum > 0 && weekCleared) {
+            const imgPath = `images/player/week${currentWeekNum}.jpg`;
+            modalIcon.innerHTML = `<img src="${imgPath}" style="width:100px; height:auto; border-radius:8px;" onerror="this.outerHTML='🏆'">`;
             modalTitle.innerText = `Week ${currentWeekNum} パーフェクト達成！`;
-            modalMsg.innerHTML = `7日間の課題をすべてクリアしました！<br>ボーナスカード <strong>「${cardInfo.name} ${cardInfo.icon}」</strong> をGETしました！`;
+            modalMsg.innerHTML = `7日間の課題をすべてクリアしました！<br>ボーナスカード <strong>「week${currentWeekNum}.jpg」</strong> をGETしました！`;
         } else {
             modalIcon.innerText = "🎉";
             modalTitle.innerText = "今日の課題クリア！";
@@ -791,15 +788,14 @@
         document.getElementById('modal-bg').style.display = 'none';
     }
 
-    // カード図鑑描画（7日完了ごとに1枚ゲット）
     function renderCollection() {
         const container = document.getElementById('card-display-area');
         container.innerHTML = '';
 
         const currentDayNum = calculateCurrentDayNumber();
-        const currentWeekNum = Math.ceil(currentDayNum / 7);
+        let currentWeekNum = getWeekNumFromDay(currentDayNum);
+        if (currentWeekNum < 1) currentWeekNum = 1;
 
-        // 1. 今週チャレンジ中のカード（1枚）
         const thisWeekHeader = document.createElement('div');
         thisWeekHeader.className = 'collection-section-title';
         thisWeekHeader.innerText = `🎯 今週（Week ${currentWeekNum}）のチャレンジカード`;
@@ -809,21 +805,25 @@
         thisWeekGrid.className = 'card-grid';
 
         const isWeekUnlocked = isWeekFullyCleared(currentWeekNum);
-        const cardInfo = WEEK_CARDS[(currentWeekNum - 1) % WEEK_CARDS.length];
+        const imgPath = `images/player/week${currentWeekNum}.jpg`;
 
-        // 7日間のうち何日クリアしたかカウント
         let clearedCount = 0;
-        const weekStart = (currentWeekNum - 1) * 7 + 1;
-        const weekEnd = currentWeekNum * 7;
+        const weekEnd = (currentWeekNum + 1) * 7;
+        const weekStart = weekEnd - 6;
         for (let d = weekStart; d <= weekEnd; d++) {
             if (gameState.completedDays.includes(d)) clearedCount++;
         }
 
         const currentCardDiv = document.createElement('div');
         currentCardDiv.className = `card-item ${isWeekUnlocked ? 'unlocked' : ''}`;
+        
+        const cardImgHtml = isWeekUnlocked 
+            ? `<img src="${imgPath}" style="width:100%; border-radius:6px;" onerror="this.outerHTML='❓'">` 
+            : `<div style="font-size:2.5rem; margin-bottom:8px;">🔒</div>`;
+
         currentCardDiv.innerHTML = `
-            <div class="card-icon">${isWeekUnlocked ? cardInfo.icon : '🔒'}</div>
-            <div class="card-title">${isWeekUnlocked ? cardInfo.name : `Week ${currentWeekNum} カード`}</div>
+            <div class="card-icon">${cardImgHtml}</div>
+            <div class="card-title">Week ${currentWeekNum} カード</div>
             <div style="font-size:0.75rem; color:${isWeekUnlocked ? '#d97706' : '#64748b'}; margin-top:4px;">
                 ${isWeekUnlocked ? 'GET済み！' : `進捗: ${clearedCount} / 7 日クリア`}
             </div>
@@ -831,7 +831,6 @@
         thisWeekGrid.appendChild(currentCardDiv);
         container.appendChild(thisWeekGrid);
 
-        // 2. 過去にゲットしたカード一覧（バックナンバー）
         const historyHeader = document.createElement('div');
         historyHeader.className = 'collection-section-title';
         historyHeader.innerText = `📦 過去にゲットしたカード一覧`;
@@ -841,19 +840,20 @@
         historyGrid.className = 'card-grid';
 
         let unlockedCount = 0;
-        // 過去のWeekをチェック
-        for (let w = 1; w <= currentWeekNum; w++) {
+        for (let w = 1; w <= 16; w++) {
             if (isWeekFullyCleared(w)) {
                 unlockedCount++;
-                const pastCard = WEEK_CARDS[(w - 1) % WEEK_CARDS.length];
-                const endDay = w * 7;
+                const pastImgPath = `images/player/week${w}.jpg`;
+                const targetDay = (w + 1) * 7;
 
                 const cardDiv = document.createElement('div');
                 cardDiv.className = 'card-item unlocked';
                 cardDiv.innerHTML = `
-                    <div class="card-icon">${pastCard.icon}</div>
-                    <div class="card-title">${pastCard.name}</div>
-                    <div style="font-size:0.7rem; color:#d97706; margin-top:2px;">Week ${w}（${endDay}日目達成）</div>
+                    <div class="card-icon">
+                        <img src="${pastImgPath}" style="width:100%; border-radius:6px;" onerror="this.outerHTML='🏆'">
+                    </div>
+                    <div class="card-title">Week ${w} カード</div>
+                    <div style="font-size:0.7rem; color:#d97706; margin-top:2px;">${targetDay}日目達成！</div>
                 `;
                 historyGrid.appendChild(cardDiv);
             }
@@ -862,7 +862,7 @@
         if (unlockedCount === 0) {
             const emptyMsg = document.createElement('p');
             emptyMsg.style.cssText = "color:#64748b; font-size:0.9rem;";
-            emptyMsg.innerText = "まだ獲得したカードはありません。7日間（1週間）の課題をすべてクリアしてカードをゲットしよう！";
+            emptyMsg.innerText = "まだ獲得したカードはありません。14日目（Week 1）、21日目（Week 2）を目指して課題をクリアしよう！";
             container.appendChild(emptyMsg);
         } else {
             container.appendChild(historyGrid);
