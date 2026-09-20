@@ -600,7 +600,7 @@
             const memo11 = gameState.kanjiWrongNotes[11] ? `【11日目】${gameState.kanjiWrongNotes[11]}` : '';
             const memo12 = gameState.kanjiWrongNotes[12] ? `【12日目】${gameState.kanjiWrongNotes[12]}` : '';
             const combinedMemo = [memo11, memo12].filter(Boolean).join(' / ');
-            document.getElementById('kanji-review-text').innerText = combinedMemo || "復習が必要な問題はありません（全問正解！）";
+            document.getElementById('kanji-review-text').innerText = combinedMemo || "復習が必要な番号メモはありません（全問正解！）";
         } else {
             reviewMemo.style.display = 'none';
         }
@@ -694,10 +694,27 @@
         const inputElem = document.getElementById(`input-${subKey}-${qId}`);
         if (!inputElem) return;
 
-        const userAns = inputElem.value.trim();
-        const correctAns = qObj.answers[0].ans;
+        const userAns = inputElem.value.trim().toLowerCase();
+        const correctAns = qObj.answers[0].ans.trim().toLowerCase();
 
-        const isCorrect = userAns !== '' && userAns.toLowerCase() === correctAns.toLowerCase();
+        if (userAns === '') return;
+
+        let isCorrect = false;
+
+        if (qObj.type === 'select') {
+            // 選択肢（プルダウン）の場合の判定ロジック
+            // 1. 完全一致（例: プルダウン「ア エンドウ」 ＝ I列「ア エンドウ」）
+            // 2. プルダウンの先頭文字とI列が一致（例: プルダウン「ア エンドウ」の先頭「ア」 ＝ I列「ア」）
+            // 3. I列がプルダウン文字列の前方一致（例: プルダウン「ア エンドウ」 ＝ I列「ア」）
+            const userSymbol = userAns.split(/[\s ]+/)[0];
+
+            isCorrect = (userAns === correctAns) || 
+                        (userSymbol === correctAns) || 
+                        (userAns.startsWith(correctAns));
+        } else {
+            // 通常のテキスト入力の場合（完全一致判定）
+            isCorrect = (userAns === correctAns);
+        }
 
         if (!gameState.clearedStatus[viewingDay][subKey]) {
             gameState.clearedStatus[viewingDay][subKey] = {};
