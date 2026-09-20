@@ -242,7 +242,7 @@
       });
     }
 
-    // 達成報酬カード生成（weekX.jpg 形式に統一）
+    // 達成報酬カード生成（weekX.jpg 形式に統一・エラー回避処理）
     function renderRewardCard(dayNum) {
       const weekNum = Math.floor((dayNum - 1) / 7) + 1; 
       const dayInWeek = ((dayNum - 1) % 7) + 1;        
@@ -255,7 +255,6 @@
         const completed = isDayCompleted(dayNum);
 
         if (completed) {
-          const imgPath = `./images/player/week${weekNum}.jpg`;
           card.style.borderColor = '#ffc107';
           card.style.background = 'linear-gradient(135deg, #fffdf0 0%, #ffeaa7 100%)';
           card.innerHTML = `
@@ -263,8 +262,7 @@
             <div class="reward-title">🎉 1週間コンプリート！</div>
             <p class="reward-desc">✨ スペシャルカードGET！</p>
             <div class="player-img-container">
-              <img src="${imgPath}" alt="スペシャルカード" class="player-img" 
-                   onerror="if(this.src.endsWith('.jpg')){ this.src='./images/player/week${weekNum}.png'; } else if(this.src.endsWith('.png')){ this.src='./images/player/week${weekNum}.jpeg'; } else { this.onerror=null; this.parentElement.innerHTML='<p style=\'color:red;font-size:12px;margin:12px 0;\'>⚠️ 画像が見つかりません<br>(week${weekNum}.jpg)</p>'; }">
+              <img src="./images/player/week${weekNum}.jpg" alt="スペシャルカード" class="player-img">
             </div>
           `;
         } else {
@@ -290,7 +288,7 @@
       return card;
     }
 
-    // 図鑑ポップアップ（weekX.jpg 形式に統一）
+    // 図鑑ポップアップ（weekX.jpg 形式に統一・エラー回避処理）
     function openCollectionModal() {
       const modal = document.getElementById('collection-modal');
       const listContainer = document.getElementById('collection-list');
@@ -306,14 +304,12 @@
         const cardBox = document.createElement('div');
 
         if (isCompleted) {
-          const imgPath = `./images/player/week${w}.jpg`;
           cardBox.className = 'reward-card';
           cardBox.style.margin = '0';
           cardBox.innerHTML = `
             <span class="reward-badge" style="background:#28a745;color:#fff;">✨ 第${w}週 スペシャルカード（GET済み）</span>
             <div class="player-img-container">
-              <img src="${imgPath}" alt="第${w}週のスペシャルカード" class="player-img"
-                   onerror="if(this.src.endsWith('.jpg')){ this.src='./images/player/week${w}.png'; } else if(this.src.endsWith('.png')){ this.src='./images/player/week${w}.jpeg'; } else { this.onerror=null; this.parentElement.innerHTML='<p style=\'color:red;font-size:12px;margin:12px 0;\'>⚠️ 画像が見つかりません<br>(week${w}.jpg)</p>'; }">
+              <img src="./images/player/week${w}.jpg" alt="第${w}週のスペシャルカード" class="player-img">
             </div>
           `;
         } else {
@@ -451,4 +447,24 @@
 
               btn.onclick = () => {
                 toggleWrongKanji(itemKey);
-                const nowWrong = getWrongKan
+                const nowWrong = getWrongKanji().includes(itemKey);
+                btn.style.backgroundColor = nowWrong ? '#dc3545' : '#f8f9fa';
+                btn.style.color = nowWrong ? '#ffffff' : '#333333';
+              };
+              grid.appendChild(btn);
+            }
+            currentCard.appendChild(grid);
+          }
+          return;
+        }
+
+        // 通常問題の処理
+        if (task.title || task.question) {
+          const itemBox = document.createElement('div');
+          itemBox.style.cssText = 'padding:10px 0; border-top:1px dashed #eee;';
+
+          let optionsHtml = '';
+          if (task.options) {
+            const opts = task.options.split(',');
+            optionsHtml = '<div class="options-container">' + 
+              opts.map(o => `<button type="button
