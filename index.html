@@ -702,17 +702,12 @@
         let isCorrect = false;
 
         if (qObj.type === 'select') {
-            // 選択肢（プルダウン）の場合の判定ロジック
-            // 1. 完全一致（例: プルダウン「ア エンドウ」 ＝ I列「ア エンドウ」）
-            // 2. プルダウンの先頭文字とI列が一致（例: プルダウン「ア エンドウ」の先頭「ア」 ＝ I列「ア」）
-            // 3. I列がプルダウン文字列の前方一致（例: プルダウン「ア エンドウ」 ＝ I列「ア」）
             const userSymbol = userAns.split(/[\s ]+/)[0];
 
             isCorrect = (userAns === correctAns) || 
                         (userSymbol === correctAns) || 
                         (userAns.startsWith(correctAns));
         } else {
-            // 通常のテキスト入力の場合（完全一致判定）
             isCorrect = (userAns === correctAns);
         }
 
@@ -750,6 +745,13 @@
 
     function isWeekFullyCleared(weekNum) {
         if (weekNum <= 0) return false;
+
+        // Week 1（8〜14日目）特別ルール：14日目完了でカード解放
+        if (weekNum === 1) {
+            return gameState.completedDays.includes(14);
+        }
+
+        // Week 2以降：7日間すべての完了をチェック
         const end = (weekNum + 1) * 7;
         const start = end - 6;
         for (let d = start; d <= end; d++) {
@@ -783,7 +785,7 @@
         } else {
             modalIcon.innerText = "🎉";
             modalTitle.innerText = "今日の課題クリア！";
-            modalMsg.innerText = "今日の問題をすべて解き終えました！この調子で7日間達成をめざそう！";
+            modalMsg.innerText = "見事に今日のすべての問題を解き明かしました！この調子で7日間達成をめざそう！";
         }
 
         document.getElementById('congrats-modal').style.display = 'flex';
@@ -842,11 +844,17 @@
         const isWeekUnlocked = isWeekFullyCleared(currentWeekNum);
         const imgPath = `images/player/week${currentWeekNum}.jpg`;
 
-        let clearedCount = 0;
-        const weekEnd = (currentWeekNum + 1) * 7;
-        const weekStart = weekEnd - 6;
-        for (let d = weekStart; d <= weekEnd; d++) {
-            if (gameState.completedDays.includes(d)) clearedCount++;
+        let statusSubText = '';
+        if (currentWeekNum === 1) {
+            statusSubText = isWeekUnlocked ? 'GET済み！' : '14日目クリアで解放';
+        } else {
+            let clearedCount = 0;
+            const weekEnd = (currentWeekNum + 1) * 7;
+            const weekStart = weekEnd - 6;
+            for (let d = weekStart; d <= weekEnd; d++) {
+                if (gameState.completedDays.includes(d)) clearedCount++;
+            }
+            statusSubText = isWeekUnlocked ? 'GET済み！' : `進捗: ${clearedCount} / 7 日クリア`;
         }
 
         const currentCardDiv = document.createElement('div');
@@ -860,7 +868,7 @@
             <div class="card-icon">${cardImgHtml}</div>
             <div class="card-title">Week ${currentWeekNum} カード</div>
             <div style="font-size:0.75rem; color:${isWeekUnlocked ? '#d97706' : '#64748b'}; margin-top:4px;">
-                ${isWeekUnlocked ? 'GET済み！' : `進捗: ${clearedCount} / 7 日クリア`}
+                ${statusSubText}
             </div>
         `;
         thisWeekGrid.appendChild(currentCardDiv);
