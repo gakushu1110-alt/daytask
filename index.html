@@ -7,7 +7,6 @@
   <style>
     body { font-family: sans-serif; padding: 16px; background: #f5f5f5; max-width: 600px; margin: 0 auto; }
     
-    /* ヘッダー＆図鑑ボタン */
     .header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
     .collection-btn { padding: 8px 16px; background: linear-gradient(135deg, #ffc107, #ff9800); color: #fff; border: none; border-radius: 20px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.15); font-size: 14px; }
     
@@ -24,7 +23,6 @@
     .options-container { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
     .option-btn { padding: 6px 12px; border: 1px solid #007bff; background: #e7f1ff; color: #007bff; border-radius: 6px; cursor: pointer; font-weight: bold; }
     
-    /* 選手カード演出用スタイル */
     .reward-card { border: 2px solid #ffc107; border-radius: 12px; padding: 16px; margin-bottom: 20px; background: linear-gradient(135deg, #fffdf0 0%, #fff9e6 100%); text-align: center; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
     .reward-badge { display: inline-block; padding: 4px 12px; background: #ffc107; color: #000; font-weight: bold; border-radius: 12px; font-size: 12px; margin-bottom: 8px; }
     .locked-box { font-size: 48px; margin: 12px 0; background: #e9ecef; border-radius: 12px; padding: 16px; border: 2px dashed #adb5bd; }
@@ -33,7 +31,6 @@
     .reward-title { font-size: 18px; font-weight: bold; color: #333; margin-bottom: 4px; }
     .reward-desc { font-size: 13px; color: #666; margin: 0; }
 
-    /* 図鑑モーダル（ポップアップ） */
     .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1000; justify-content: center; align-items: center; }
     .modal-overlay.active { display: flex; }
     .modal-content { background: #fff; width: 90%; max-width: 500px; max-height: 85vh; border-radius: 16px; padding: 20px; overflow-y: auto; box-shadow: 0 10px 25px rgba(0,0,0,0.3); position: relative; }
@@ -45,7 +42,6 @@
 </head>
 <body>
 
-  <!-- ヘッダーエリア -->
   <div class="header-bar">
     <div style="font-weight:bold; color:#333;">📅 学習カレンダー</div>
     <button class="collection-btn" onclick="openCollectionModal()">🏆 選手カード図鑑</button>
@@ -55,16 +51,13 @@
   <div id="button-container" class="filter-container"></div>
   <div id="task-container">データを読み込み中...</div>
 
-  <!-- 図鑑用モーダル（ポップアップ） -->
   <div id="collection-modal" class="modal-overlay" onclick="closeCollectionModal(event)">
     <div class="modal-content" onclick="event.stopPropagation()">
       <div class="modal-header">
         <h2 class="modal-title">🏆 サッカー選手カード図鑑</h2>
         <button class="modal-close" onclick="closeCollectionModal()">&times;</button>
       </div>
-      <div id="collection-list" class="collection-grid">
-        <!-- JSでここに獲得カード一覧を挿入 -->
-      </div>
+      <div id="collection-list" class="collection-grid"></div>
     </div>
   </div>
 
@@ -74,7 +67,6 @@
     let currentDay = null;
     let currentSubjectFilter = 'すべて';
 
-    // 日付変換ロジック：Day 15 = 2026/09/20 (Day 1 = 2026/09/06)
     const BASE_DATE = new Date(2026, 8, 6);
     const WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土'];
 
@@ -90,13 +82,26 @@
     document.addEventListener('DOMContentLoaded', fetchData);
 
     async function fetchData() {
+      const container = document.getElementById('task-container');
       try {
-        const cacheBuster = (SPREADSHEET_URL.includes('?') ? '&' : '?') + '_t=' + Date.now();
-        const response = await fetch(SPREADSHEET_URL + cacheBuster);
-        if (!response.ok) throw new Error('HTTPエラー: ' + response.status);
-        const data = await response.text();
-        
-        allTasks = parseCSV(data);
+        let csvText = '';
+        try {
+          const res = await fetch(SPREADSHEET_URL + '&_t=' + Date.now());
+          if (res.ok) csvText = await res.text();
+        } catch (e) {
+          console.warn('Direct fetch failed, trying proxy...', e);
+        }
+
+        // 直接取得できない場合はプロキシ経由で再試行
+        if (!csvText) {
+          const proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(SPREADSHEET_URL);
+          const resProxy = await fetch(proxyUrl);
+          if (resProxy.ok) csvText = await resProxy.text();
+        }
+
+        if (!csvText) throw new Error('スプレッドシートの読み込みに失敗しました。');
+
+        allTasks = parseCSV(csvText);
         
         const days = [...new Set(allTasks.map(t => String(t.day)).filter(Boolean))].sort((a,b) => Number(a) - Number(b));
         if (days.length > 0) {
@@ -107,7 +112,10 @@
         renderTasks();
       } catch (error) {
         console.error(error);
-        document.getElementById('task-container').innerHTML = '<p style="color:red;">データの読み込みに失敗しました。</p>';
+        container.innerHTML = `<p style="color:red;font-weight:bold;padding:12px;background:#fff5f5;border:1px solid #ffcdd2;border-radius:8px;">
+          ⚠️ データの読み込みに失敗しました。<br>
+          <span style="font-size:12px;color:#666;">詳細: ${error.message}</span>
+        </p>`;
       }
     }
 
@@ -242,7 +250,6 @@
       });
     }
 
-    // 達成報酬カード生成（weekX.jpg 形式に統一・エラー回避処理）
     function renderRewardCard(dayNum) {
       const weekNum = Math.floor((dayNum - 1) / 7) + 1; 
       const dayInWeek = ((dayNum - 1) % 7) + 1;        
@@ -288,7 +295,6 @@
       return card;
     }
 
-    // 図鑑ポップアップ（weekX.jpg 形式に統一・エラー回避処理）
     function openCollectionModal() {
       const modal = document.getElementById('collection-modal');
       const listContainer = document.getElementById('collection-list');
@@ -367,7 +373,6 @@
         const imgPath = fixImagePath(task.groupImage);
         const hasImage = imgPath !== '';
 
-        // Day 13 の漢字復習処理
         if (String(task.day) === '13' && isKanji) {
           const reviewCard = document.createElement('div');
           reviewCard.className = 'task-card';
@@ -419,7 +424,6 @@
           currentImage = hasImage ? imgPath : null;
         }
 
-        // 漢字の処理（Day 11, Day 12 のみボタンを表示）
         if (isKanji) {
           if (task.question) {
             const qTitle = document.createElement('p');
@@ -458,13 +462,9 @@
           return;
         }
 
-        // 通常問題の処理
         if (task.title || task.question) {
           const itemBox = document.createElement('div');
           itemBox.style.cssText = 'padding:10px 0; border-top:1px dashed #eee;';
 
           let optionsHtml = '';
-          if (task.options) {
-            const opts = task.options.split(',');
-            optionsHtml = '<div class="options-container">' + 
-              opts.map(o => `<button type="button
+          if (task
