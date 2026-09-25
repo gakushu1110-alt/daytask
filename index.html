@@ -37,6 +37,12 @@
             margin-bottom: 20px;
             font-size: 0.95rem;
         }
+        .sync-status {
+            text-align: center;
+            font-size: 0.85rem;
+            color: #64748b;
+            margin-bottom: 10px;
+        }
         .card {
             background: var(--card-bg);
             border-radius: 12px;
@@ -92,12 +98,14 @@
             background: #eff6ff;
             color: var(--primary);
         }
+
         .section, .subject-section {
             display: none;
         }
         .section.active, .subject-section.active {
             display: block;
         }
+
         .day-info {
             background: #eff6ff;
             color: #1e40af;
@@ -178,6 +186,7 @@
             background: #94a3b8;
             cursor: not-allowed;
         }
+
         .eval-btn-group {
             display: flex;
             gap: 10px;
@@ -201,6 +210,7 @@
             border-color: var(--danger);
             color: #b91c1c;
         }
+
         .result-msg {
             font-weight: bold;
             margin-left: 8px;
@@ -209,6 +219,7 @@
         }
         .correct { color: var(--success); }
         .incorrect { color: var(--danger); }
+
         #modal-bg, #congrats-modal {
             display: none;
             position: fixed;
@@ -239,6 +250,7 @@
             0% { transform: scale(0.7); opacity: 0; }
             100% { transform: scale(1); opacity: 1; }
         }
+
         .card-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
@@ -286,6 +298,7 @@
 <div class="container">
     <h1>⚽ まいにち学習＆ワールドカードコレクション</h1>
     <div class="subtitle">7日間チャレンジを達成して、ボーナスカードをGETしよう！</div>
+    <div id="sync-status" class="sync-status">🔄 データを同期中...</div>
 
     <div class="tab-menu">
         <button class="tab-btn active" onclick="switchTab('study')">きょうの課題</button>
@@ -309,6 +322,7 @@
                 <button class="subject-btn" onclick="switchSubject('social')">🌍 社会</button>
             </div>
 
+            <!-- 1. 漢字 -->
             <div id="subject-kanji" class="subject-section active">
                 <div class="sub-question-item" style="background:#eff6ff; border-color:#bfdbfe;">
                     <div style="font-weight: bold; font-size: 1.05rem; margin-bottom: 4px;">✍️ 漢字（ノート手書き練習）</div>
@@ -336,14 +350,17 @@
                 </div>
             </div>
 
+            <!-- 2. 算数 -->
             <div id="subject-calc" class="subject-section">
                 <div id="calc-container"></div>
             </div>
 
+            <!-- 3. 理科 -->
             <div id="subject-science" class="subject-section">
                 <div id="science-container"></div>
             </div>
 
+            <!-- 4. 社会 -->
             <div id="subject-social" class="subject-section">
                 <div id="social-container"></div>
             </div>
@@ -386,11 +403,10 @@
 </div>
 
 <script>
-    const RAW_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vS5zB1_bZuI8Vk7FwuyP3OWjgRVGzpP9LZ542955Kqs8adn7ustm6FB_zUNWm9Jo2py9BYGddk1Z_Bz/pub?output=csv";
-    const CSV_URL = "https://corsproxy.io/?" + encodeURIComponent(RAW_CSV);
-    
-    const GAS_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbzwgQ6zxzG27_0WvchBnHLGbwdHDdWM7gA-R4gUX4RdyUryZghycGXVO18V_bnFT6mC/exec";
+    const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vS5zB1_bZuI8Vk7FwuyP3OWjgRVGzpP9LZ542955Kqs8adn7ustm6FB_zUNWm9Jo2py9BYGddk1Z_Bz/pub?output=csv"; 
+    const GAS_WEB_URL = "https://script.google.com/macros/s/AKfycbzwgQ6zxzG27_0WvchBnHLGbwdHDdWM7gA-R4gUX4RdyUryZghycGXVO18V_bnFT6mC/exec";
 
+    // 2026/09/20 を 15日目 とする基準定義
     const BASE_DATE = new Date("2026-09-20T00:00:00");
     const BASE_DAY_NUM = 15;
 
@@ -422,9 +438,17 @@
 
     window.onload = function() {
         loadLocalStorageData();
-        syncWithGAS();
         loadCSVData();
+        loadGASData();
     };
+
+    function updateSyncStatus(msg, color = '#64748b') {
+        const el = document.getElementById('sync-status');
+        if (el) {
+            el.innerText = msg;
+            el.style.color = color;
+        }
+    }
 
     function loadLocalStorageData() {
         const saved = localStorage.getItem("study_game_state");
@@ -435,41 +459,49 @@
 
     function saveLocalStorageData() {
         localStorage.setItem("study_game_state", JSON.stringify(gameState));
-        sendDataToGAS(gameState);
+        syncGASData();
     }
 
-    function syncWithGAS() {
-        if (!GAS_WEBAPP_URL) return;
-        fetch(GAS_WEBAPP_URL)
+    // GASからサーバー上のデータを取得する
+    function loadGASData() {
+        updateSyncStatus("🔄 クラウドとデータを同期中...");
+        fetch(GAS_WEB_URL)
             .then(res => res.json())
-            .then(remoteState => {
-                if (remoteState && remoteState.completedDays) {
-                    gameState = remoteState;
+            .then(data => {
+                if (data && typeof data === 'object' && Object.keys(data).length > 0) {
+                    gameState = data;
                     localStorage.setItem("study_game_state", JSON.stringify(gameState));
                     updateDayContent();
+                    updateSyncStatus("✅ クラウド同期完了", "#22c55e");
+                } else {
+                    updateSyncStatus("☁️ クラウド連携準備完了", "#64748b");
                 }
             })
-            .catch(err => console.log("クラウド同期スキップ"));
+            .catch(err => {
+                console.warn("GASからの読み込みに失敗しました（ローカルデータを使用します）:", err);
+                updateSyncStatus("⚠️ オフラインモード（ローカル保存のみ）", "#f59e0b");
+            });
     }
 
-    function sendDataToGAS(payload) {
-        if (!GAS_WEBAPP_URL) return;
-        fetch(GAS_WEBAPP_URL, {
-            method: "POST",
-            mode: "no-cors",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload)
-        }).catch(err => console.error("GAS送信エラー:", err));
-    }
-
-    function sendLogToGAS(logPayload) {
-        if (!GAS_WEBAPP_URL) return;
-        fetch(GAS_WEBAPP_URL, {
-            method: "POST",
-            mode: "no-cors",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(logPayload)
-        }).catch(err => console.error("ログ送信エラー:", err));
+    // GASへ現在のデータを保存する
+    function syncGASData() {
+        updateSyncStatus("⏳ 保存中...");
+        fetch(GAS_WEB_URL, {
+            method: 'POST',
+            mode: 'no-cors', // クロスドメイン制限対策
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(gameState)
+        })
+        .then(() => {
+            updateSyncStatus("✅ 保存しました", "#22c55e");
+            setTimeout(() => updateSyncStatus(""), 3000);
+        })
+        .catch(err => {
+            console.error("GASへの保存に失敗しました:", err);
+            updateSyncStatus("❌ 保存に失敗しました", "#ef4444");
+        });
     }
 
     function loadCSVData() {
@@ -481,7 +513,6 @@
             })
             .catch(err => {
                 console.error("CSVデータの取得に失敗しました:", err);
-                updateDayContent();
             });
     }
 
@@ -541,7 +572,7 @@
                 optionsArray = rawOptions.split(/[,、|]/).map(o => o.trim()).filter(Boolean);
             }
 
-            let fullQ = qTitle ? `\({qTitle}\){qText}` : qText;
+            let fullQ = qTitle ? `${qTitle} ${qText}` : qText;
             questionsData[day][subKey].push({
                 id: questionsData[day][subKey].length,
                 q: fullQ,
@@ -582,7 +613,7 @@
         document.getElementById('cycle-day-text').innerText = `学習サイクル: ${viewingDay}日目`;
         
         const now = new Date();
-        document.getElementById('today-date-sub').innerText = `（本日: \({now.getFullYear()}/\){now.getMonth()+1}/${now.getDate()}）`;
+        document.getElementById('today-date-sub').innerText = `（本日: ${now.getFullYear()}/${now.getMonth()+1}/${now.getDate()}）`;
 
         const defaultInstruction = kanjiSchedule[viewingDay] || `${viewingDay}日目：漢字の学習（ノートに書いて練習）`;
         document.getElementById('kanji-instruction').innerText = defaultInstruction;
@@ -647,17 +678,6 @@
         }
         gameState.clearedStatus[viewingDay].kanji = isOk;
         saveLocalStorageData();
-
-        sendLogToGAS({
-            type: "ANSWER_SUBMIT",
-            timestamp: new Date().toLocaleString("ja-JP"),
-            day: viewingDay,
-            category: "漢字",
-            questionText: kanjiSchedule[viewingDay] || "漢字手書き練習",
-            userAnswers: isOk ? ["できた"] : ["間違いあり"],
-            isCorrect: isOk
-        });
-
         updateDayContent();
     }
 
@@ -680,19 +700,19 @@
 
             let imgHtml = qObj.imgUrl ? `<div class="problem-img-box"><img src="${qObj.imgUrl}" alt="問題画像"></div>` : '';
             
-            const savedVal = (gameState.savedInputs[viewingDay] && gameState.savedInputs[viewingDay][`\({subKey}_\){qObj.id}`]) || '';
+            const savedVal = (gameState.savedInputs[viewingDay] && gameState.savedInputs[viewingDay][`${subKey}_${qObj.id}`]) || '';
             const isCleared = gameState.clearedStatus[viewingDay] && gameState.clearedStatus[viewingDay][subKey] && gameState.clearedStatus[viewingDay][subKey][qObj.id];
 
             let inputHtml = '';
             if (qObj.type === 'select') {
-                let optionsHtml = qObj.options.map(opt => `<option value="\({opt}"\){savedVal === opt ? 'selected' : ''}>${opt}</option>`).join('');
+                let optionsHtml = qObj.options.map(opt => `<option value="${opt}" ${savedVal === opt ? 'selected' : ''}>${opt}</option>`).join('');
                 inputHtml = `
-                    <select id="input-\({subKey}-\){qObj.id}" onchange="saveInputVal('\({subKey}',\){qObj.id}, this.value)">
+                    <select id="input-${subKey}-${qObj.id}" onchange="saveInputVal('${subKey}', ${qObj.id}, this.value)">
                         <option value="">-- えらんでね --</option>
                         ${optionsHtml}
                     </select>`;
             } else {
-                inputHtml = `<input type="text" id="input-\({subKey}-\){qObj.id}" value="\({savedVal}" placeholder="答えを入力" onchange="saveInputVal('\){subKey}', \({qObj.id}, this.value)" onkeydown="if(event.key === 'Enter'){ saveInputVal('\){subKey}', \({qObj.id}, this.value); checkSingleAnswer('\){subKey}', ${qObj.id}); }">`;
+                inputHtml = `<input type="text" id="input-${subKey}-${qObj.id}" value="${savedVal}" placeholder="答えを入力" onchange="saveInputVal('${subKey}', ${qObj.id}, this.value)" onkeydown="if(event.key === 'Enter'){ saveInputVal('${subKey}', ${qObj.id}, this.value); checkSingleAnswer('${subKey}', ${qObj.id}); }">`;
             }
 
             let msgHtml = '';
@@ -703,12 +723,12 @@
             }
 
             itemDiv.innerHTML = `
-                <div style="font-weight:bold; margin-bottom:8px;">問 \({qObj.id + 1}.\){qObj.q}</div>
+                <div style="font-weight:bold; margin-bottom:8px;">問 ${qObj.id + 1}. ${qObj.q}</div>
                 ${imgHtml}
                 <div class="sub-inputs-container">
                     <div class="sub-input-row">
                         ${inputHtml}
-                        <button class="action-btn" onclick="checkSingleAnswer('\({subKey}',\){qObj.id})">判定</button>
+                        <button class="action-btn" onclick="checkSingleAnswer('${subKey}', ${qObj.id})">判定</button>
                         ${msgHtml}
                     </div>
                 </div>
@@ -719,7 +739,7 @@
 
     function saveInputVal(subKey, qId, val) {
         if (!gameState.savedInputs[viewingDay]) gameState.savedInputs[viewingDay] = {};
-        gameState.savedInputs[viewingDay][`\({subKey}_\){qId}`] = val;
+        gameState.savedInputs[viewingDay][`${subKey}_${qId}`] = val;
         saveLocalStorageData();
     }
 
@@ -729,7 +749,7 @@
         const qObj = qList.find(item => item.id === qId);
         if (!qObj) return;
 
-        const inputElem = document.getElementById(`input-\({subKey}-\){qId}`);
+        const inputElem = document.getElementById(`input-${subKey}-${qId}`);
         if (!inputElem) return;
 
         const userAns = inputElem.value.trim().toLowerCase();
@@ -754,17 +774,6 @@
         }
         gameState.clearedStatus[viewingDay][subKey][qId] = isCorrect;
         saveLocalStorageData();
-
-        const categoryMap = { calc: "算数", science: "理科", social: "社会" };
-        sendLogToGAS({
-            type: "ANSWER_SUBMIT",
-            timestamp: new Date().toLocaleString("ja-JP"),
-            day: viewingDay,
-            category: categoryMap[subKey] || subKey,
-            questionText: qObj.q,
-            userAnswers: [userAns],
-            isCorrect: isCorrect
-        });
 
         updateDayContent();
     }
@@ -815,12 +824,6 @@
         if (!gameState.completedDays.includes(viewingDay)) {
             gameState.completedDays.push(viewingDay);
             saveLocalStorageData();
-
-            sendLogToGAS({
-                type: "DAY_COMPLETE",
-                timestamp: new Date().toLocaleString("ja-JP"),
-                day: viewingDay
-            });
         }
 
         const currentWeekNum = getWeekNumFromDay(viewingDay);
@@ -862,7 +865,7 @@
             btn.style.cssText = 'width: 100%; margin-bottom: 8px; text-align: left; padding: 10px;';
             const isDone = gameState.completedDays.includes(d) ? '✅ ' : '⏳ ';
             const isTodayMark = (d === currentDayNum) ? ' (きょう)' : '';
-            btn.innerText = `\({isDone}\){d}日目の学習${isTodayMark}`;
+            btn.innerText = `${isDone}${d}日目の学習${isTodayMark}`;
             btn.onclick = () => {
                 viewingDay = d;
                 updateDayContent();
